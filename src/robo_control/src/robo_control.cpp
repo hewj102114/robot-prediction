@@ -377,7 +377,7 @@ void RoboControl::read_xml_file()
     *  参数说明：无数如参数
     *  函数返回：无返回值
     *************************************************************************/
-    cv::FileStorage fs("/home/ubuntu/robot/src/robo_navigation/script/matrix.xml", cv::FileStorage::READ);
+    cv::FileStorage fs("/home/ubuntu/robot-prediction/src/robo_navigation/script/matrix.xml", cv::FileStorage::READ);
     fs["Point"] >> point_list;
 }
 

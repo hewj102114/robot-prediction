@@ -1,0 +1,210 @@
+[global_config]
+[keybindings]
+[layouts]
+  [[default]]
+    [[[child0]]]
+      fullscreen = False
+      last_active_term = d33dd80f-6329-4161-a372-9737b5a2c097
+      last_active_window = True
+      maximised = True
+      order = 0
+      parent = ""
+      position = 65:24
+      size = 1855, 1056
+      title = ubuntu@Lenovo-Rescuer: ~
+      type = Window
+    [[[child1]]]
+      order = 0
+      parent = child0
+      position = 525
+      ratio = 0.5
+      type = VPaned
+    [[[child10]]]
+      order = 0
+      parent = child9
+      position = 459
+      ratio = 0.5
+      type = HPaned
+    [[[child13]]]
+      order = 1
+      parent = child9
+      position = 459
+      ratio = 0.499459459459
+      type = HPaned
+    [[[child2]]]
+      order = 0
+      parent = child1
+      position = 925
+      ratio = 0.500269541779
+      type = HPaned
+    [[[child3]]]
+      order = 0
+      parent = child2
+      position = 459
+      ratio = 0.499459459459
+      type = HPaned
+    [[[child6]]]
+      order = 1
+      parent = child2
+      position = 459
+      ratio = 0.5
+      type = HPaned
+    [[[child9]]]
+      order = 1
+      parent = child1
+      position = 924
+      ratio = 0.499730458221
+      type = HPaned
+    [[[terminal11]]]
+      command = sh ubuntu.sh; bash
+      order = 0
+      parent = child10
+      profile = default
+      type = Terminal
+      uuid = de99e2ca-9fcb-468f-8e7f-9fc59979cba3
+    [[[terminal12]]]
+      command = sh ubuntu.sh; bash
+      order = 1
+      parent = child10
+      profile = default
+      type = Terminal
+      uuid = 5da17071-7b4b-4a7d-8906-27952e0dbe4f
+    [[[terminal14]]]
+      command = sh ubuntu.sh; bash
+      order = 0
+      parent = child13
+      profile = default
+      type = Terminal
+      uuid = 9eb40813-42e5-4f00-9481-a31256ef74ed
+    [[[terminal15]]]
+      command = sh ubuntu.sh; bash
+      order = 1
+      parent = child13
+      profile = default
+      type = Terminal
+      uuid = f45d3180-d83a-4507-a204-6b851d84535f
+    [[[terminal4]]]
+      command = sh ubuntu.sh; bash
+      order = 0
+      parent = child3
+      profile = default
+      type = Terminal
+      uuid = d33dd80f-6329-4161-a372-9737b5a2c097
+    [[[terminal5]]]
+      command = sh ubuntu.sh; bash
+      order = 1
+      parent = child3
+      profile = default
+      type = Terminal
+      uuid = 27434c18-fbe9-4c4e-8512-5a302ca3f54c
+    [[[terminal7]]]
+      command = sh ubuntu.sh; bash
+      order = 0
+      parent = child6
+      profile = default
+      type = Terminal
+      uuid = 72f070f1-a73d-4736-8a57-9ad13156505b
+    [[[terminal8]]]
+      command = sh ubuntu.sh; bash
+      order = 1
+      parent = child6
+      profile = default
+      type = Terminal
+      uuid = bd5aa05d-1f1a-41cc-b780-0554aad2c107
+  [[default_backup]]
+    [[[child0]]]
+      fullscreen = False
+      last_active_term = d33dd80f-6329-4161-a372-9737b5a2c097
+      last_active_window = True
+      maximised = False
+      order = 0
+      parent = ""
+      position = 65:24
+      size = 642, 402
+      title = ubuntu@Lenovo-Rescuer: ~
+      type = Window
+    [[[terminal1]]]
+      command = ""
+      order = 0
+      parent = child0
+      profile = default
+      type = Terminal
+      uuid = d33dd80f-6329-4161-a372-9737b5a2c097
+  [[jwwangchn]]
+    [[[child0]]]
+      order = 0
+      parent = ""
+      position = 446:100
+      size = 885, 550
+      type = Window
+    [[[child1]]]
+      order = 0
+      parent = child0
+      position = 444
+      type = HPaned
+    [[[child2]]]
+      order = 0
+      parent = child1
+      position = 275
+      type = VPaned
+    [[[child5]]]
+      order = 1
+      parent = child1
+      position = 219
+      type = HPaned
+    [[[child6]]]
+      order = 0
+      parent = child5
+      position = 275
+      type = VPaned
+    [[[child9]]]
+      order = 1
+      parent = child5
+      position = 275
+      type = VPaned
+    [[[terminal10]]]
+      command = ls; bash
+      order = 0
+      parent = child9
+      profile = default
+      type = Terminal
+    [[[terminal11]]]
+      command = df -h; bash
+      order = 1
+      parent = child9
+      profile = default
+      type = Terminal
+    [[[terminal3]]]
+      command = ssh -Yp 24222 cchapple@139.124.66.43
+      order = 0
+      parent = child2
+      profile = default
+      type = Terminal
+    [[[terminal4]]]
+      command = top; bash
+      order = 1
+      parent = child2
+      profile = default
+      type = Terminal
+    [[[terminal7]]]
+      command = cd /etc; bash
+      order = 0
+      parent = child6
+      profile = default
+      type = Terminal
+    [[[terminal8]]]
+      command = ls; bash
+      order = 1
+      parent = child6
+      profile = default
+      type = Terminal
+[plugins]
+[profiles]
+  [[default]]
+    background_image = None
+    custom_command = sh ubuntu.sh; bash
+    font = Ubuntu Mono 12
+    scroll_on_output = False
+    scrollback_infinite = True
+    use_custom_command = True
+    use_system_font = False

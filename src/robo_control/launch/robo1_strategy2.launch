@@ -1,0 +1,46 @@
+<launch>
+    <node pkg="robo_control" type="control_strategy_2_node" name="control_strategy_2_node" output="screen">
+    <!-- 参数服务器 -->    
+    <rosparam param="DEATH_AREA"> 20 </rosparam>
+
+    <rosparam param="SWITCH_FORWARD_BACKWARD_DIS"> 0.6 </rosparam>
+
+    <rosparam param="FORWARD_DIS"> 3.0 </rosparam>
+    <rosparam param="BACKWARD_DIS"> 0.6 </rosparam>    
+    
+    <rosparam param="MIN_TRACK_ENEMY_DIS"> 0.7 </rosparam>
+    <rosparam param="MAX_TRACK_ENEMY_DIS"> 3.0 </rosparam>
+
+    <rosparam param="ARMOR_MAX_LOST_NUM"> 120 </rosparam>
+    <rosparam param="ARMOR_AROUND_MAX_LOST_NUM"> 120 </rosparam>
+    <rosparam param="REALSENSE_AROUND_MAX_LOST_NUM"> 120 </rosparam>
+
+    <rosparam param="LOW_SHOT_SPEED_DISTANCE"> 2.7 </rosparam>
+    <rosparam param="HIGH_SHOT_SPEED_DISTANCE"> 1.5 </rosparam>
+
+    <rosparam param="ARMOR_LOST_PITCH"> 5.0 </rosparam>
+
+    <rosparam param="P_pitch"> 1 </rosparam>
+    <rosparam param="I_pitch"> 0.1 </rosparam>
+    <rosparam param="D_pitch"> 0 </rosparam>
+    <rosparam param="MAX_SUM_ERROR"> 1 </rosparam>
+
+    <!-- 蹲点的位置 -->
+    <!-- 朝左是 1.57, 朝右是 -1.57 -->
+    <rosparam param="pointA"> [2.6, 3.1, 0]</rosparam>  <!-- 1 车 1 点 -->              <!-- 1 左-->
+    <rosparam param="pointB"> [3.3, 3.8, -1.57]</rosparam>  <!-- 2 车 1 点 -->          <!-- 2 左-->
+    <rosparam param="pointC"> [1.3, 1.8, 1.57]</rosparam>  <!-- 2 车 2 点 -->           <!--  -->
+    <rosparam param="pointD"> [2.6, 0.8, 1.57]</rosparam>  <!-- 1 车 2 点 -->           <!--  -->
+    <rosparam param="pointE"> [2.6, 2.25, 0]</rosparam>                                 <!-- 0 右-->
+    <rosparam param="pointF"> [4.0, 2.5, 0]</rosparam>                                  <!-- 3 左-->
+    <rosparam param="pointG"> [4.7, 1.8, 1.57]</rosparam>                               <!-- 4 右-->
+
+    <!-- 1 车 -->
+    <rosparam param="robo_point1"> [2.6, 3.1, 0]</rosparam>     <!-- A -->
+    <rosparam param="robo_point2"> [2.6, 0.8, 1.57]</rosparam>  <!-- C -->
+
+    <rosparam param="first_point"> 3 </rosparam>
+
+    </node>
+</launch>
+<!--  -->

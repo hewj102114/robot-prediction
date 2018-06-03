@@ -1,0 +1,10 @@
+<launch>
+<node pkg="robo_control" type="control_node" name="control" output="screen">
+<!--<remap from="uwb_odom" to="odom"/>-->
+</node>
+<node pkg="robo_control" type="odom_broadcaster" name="odom_broadcaster"/>
+<node pkg="robo_control" type="enemy_pnp_listen" name="enemy_listen"/>
+<node pkg="robo_navigation" type="send_goal" name="send_goal"/>
+
+
+</launch>

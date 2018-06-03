@@ -1,0 +1,8 @@
+<launch>
+<node pkg="robo_control" type="pos_send.py" name="pose_socket_send">
+<param name="ip_addr_send" type="string" value="192.168.1.150"/>
+</node>
+<node pkg="robo_control" type="pos_recv.py" name="pose_socket_recv">
+<param name="ip_addr_recv" type="string" value="192.168.1.148"/>
+</node>
+</launch>

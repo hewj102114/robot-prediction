@@ -1,0 +1,5 @@
+<launch>
+<node pkg="robo_control" type="nav_test" name="nav_test" output="screen"/>
+<node pkg="robo_control" type="odom_broadcaster" name="odom_broadcaster"/>
+
+</launch>

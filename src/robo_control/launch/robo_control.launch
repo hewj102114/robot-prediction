@@ -1,0 +1,4 @@
+<launch>
+<node pkg="robo_control" type="control_node" name="control_node" output="screen"/>
+
+</launch>

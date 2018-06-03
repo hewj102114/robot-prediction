@@ -1,0 +1,10 @@
+devel/*
+build/*
+.kdev4/*
+*.kdev4
+.vscode/*
+*/.vscode/*
+*/visual/*
+logs/*
+*.gv
+*.pdf

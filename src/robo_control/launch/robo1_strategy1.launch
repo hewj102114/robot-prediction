@@ -1,0 +1,25 @@
+<launch>
+    <node pkg="robo_control" type="control_strategy_1_node" name="control_strategy_1_node" output="screen">
+        <rosparam param="DEATH_AREA"> 20 </rosparam>
+
+        <rosparam param="SWITCH_FORWARD_BACKWARD_DIS"> 0.6 </rosparam>
+        <rosparam param="MIN_TRACK_ENEMY_DIS"> 0.7 </rosparam>
+        <rosparam param="MAX_TRACK_ENEMY_DIS"> 3.0 </rosparam>
+
+        <rosparam param="ARMOR_MAX_LOST_NUM"> 120 </rosparam>
+        <rosparam param="ARMOR_AROUND_MAX_LOST_NUM"> 120 </rosparam>
+        <rosparam param="REALSENSE_AROUND_MAX_LOST_NUM"> 120 </rosparam>
+
+        <rosparam param="LOW_SHOT_SPEED_DISTANCE"> 2.7 </rosparam>
+        <rosparam param="HIGH_SHOT_SPEED_DISTANCE"> 1.5 </rosparam>
+
+        <rosparam param="ARMOR_LOST_PITCH"> 5.0 </rosparam>
+
+        <rosparam param="P_pitch"> 1 </rosparam>
+        <rosparam param="I_pitch"> 0.1 </rosparam>
+        <rosparam param="D_pitch"> 0 </rosparam>
+        <rosparam param="MAX_SUM_ERROR"> 1 </rosparam>
+        
+    </node>
+</launch>
+<!--  -->

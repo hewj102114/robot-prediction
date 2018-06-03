@@ -38,6 +38,7 @@ from nets import *
 
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+
 # from sklearn.cluster import KMeans
 
 
@@ -54,11 +55,10 @@ last_enemy_position = ObjectList()
 connection_status = team_hp = global_team_x = global_team_y = 0
 
 lose_frame_count = 0
-
 video = cv2.VideoWriter('/home/ubuntu/robot-prediction/src/robo_perception/scripts/visual/demo.avi',
                         cv2.VideoWriter_fourcc(*"MJPG"),
                         20,
-                        (848, 480))
+                        (424, 240))
 
 
 def TFinit():
@@ -163,17 +163,18 @@ def in_range(num, low, up):
 
 
 def filter_min_max(xmin, xmax, ymin, ymax):
+    global mc
     if xmin == xmax:
         if xmin == 0:
             xmax = xmax + 1
-        elif xmax == 848:
+        elif xmax == mc.IMAGE_WIDTH:
             xmin = xmin - 1
         else:
             xmax = xmax + 1
     if ymin == ymax:
         if ymin == 0:
             ymax = ymax + 1
-        elif ymax == 848:
+        elif ymax == mc.IMAGE_WIDTH:
             ymin = ymin - 1
         else:
             ymax = ymax + 1
@@ -181,14 +182,15 @@ def filter_min_max(xmin, xmax, ymin, ymax):
 
 
 def enemy_self_identify(rgb_image, robo_bboxes, show_image=False, save_image=False):
+    global mc
     enemy = []
     for robo_bbox in robo_bboxes:
         cx, cy, w, h = robo_bbox
         resize_const = 620.0
-        aligned_w = w * (848.0 / resize_const)
-        aligned_h = h * (848.0 / resize_const)
-        aligned_cx = (cx - 424) * (848.0 / resize_const) + 424.0 + 15.0
-        alinged_cy = (cy - 240) * (848.0 / resize_const) + 240.0
+        aligned_w = w * (float(mc.IMAGE_WIDTH) / resize_const)
+        aligned_h = h * (float(mc.IMAGE_WIDTH) / resize_const)
+        aligned_cx = (cx - mc.IMAGE_WIDTH / 2) * (float(mc.IMAGE_WIDTH) / resize_const) + mc.IMAGE_WIDTH / 2.0 + 15.0
+        alinged_cy = (cy - mc.IMAGE_HEIGHT / 2) * (float(mc.IMAGE_WIDTH) / resize_const) + mc.IMAGE_HEIGHT / 2.0
 
         aligned_robo_bbox = [aligned_cx, alinged_cy, aligned_w, aligned_h]
 
@@ -197,10 +199,10 @@ def enemy_self_identify(rgb_image, robo_bboxes, show_image=False, save_image=Fal
         y_min = int(aligned_robo_bbox[1] - aligned_robo_bbox[3]/2)
         y_max = int(aligned_robo_bbox[1] + aligned_robo_bbox[3]/2)
 
-        x_min = in_range(x_min, 0, 848)
-        x_max = in_range(x_max, 0, 848)
-        y_min = in_range(y_min, 0, 424)
-        y_max = in_range(y_max, 0, 424)
+        x_min = in_range(x_min, 0, mc.IMAGE_WIDTH)
+        x_max = in_range(x_max, 0, mc.IMAGE_WIDTH)
+        y_min = in_range(y_min, 0, mc.IMAGE_HEIGHT)
+        y_max = in_range(y_max, 0, mc.IMAGE_HEIGHT)
 
         x_min, x_max, y_min, y_max = filter_min_max(x_min, x_max, y_min, y_max)
 
@@ -361,6 +363,7 @@ def TsDet_callback(infrared_image, pointcloud):
             robo_bbox = final_boxes[robo_idx, :]
             # 获取车bbox的坐标, 宽度和高度
             cx, cy, w, h = robo_bbox[0], robo_bbox[1], robo_bbox[2], robo_bbox[3]
+            #if cx < 106 or cx > 723 or cy < 65 or cy > 373:
             if cx < 106 or cx > 723 or cy < 65 or cy > 373:
                 print("this robot bbox is illegal, over edge!!!")
                 continue
@@ -375,6 +378,7 @@ def TsDet_callback(infrared_image, pointcloud):
             # armor_bbox = robo_bbox
             armor_cx, armor_cy, armor_w, armor_h = armor_bbox[0], armor_bbox[1], armor_bbox[2], armor_bbox[3]
             if armor_cx < 106 or armor_cx > 723 or armor_cy < 65 or armor_cy > 373:
+            #if armor_cx < 106 or armor_cx > 723 or armor_cy < 65 or armor_cy > 373:
                 print("this armor bbox is illegal, over edge!!!")
                 continue
 

@@ -183,43 +183,50 @@ def filter_min_max(xmin, xmax, ymin, ymax):
 
 def enemy_self_identify(rgb_image, robo_bboxes, show_image=False, save_image=False):
     global mc
-    enemy = []
-    for robo_bbox in robo_bboxes:
-        cx, cy, w, h = robo_bbox
-        resize_const = 620.0
-        aligned_w = w * (float(mc.IMAGE_WIDTH) / resize_const)
-        aligned_h = h * (float(mc.IMAGE_WIDTH) / resize_const)
-        aligned_cx = (cx - mc.IMAGE_WIDTH / 2) * (float(mc.IMAGE_WIDTH) / resize_const) + mc.IMAGE_WIDTH / 2.0 + 15.0
-        alinged_cy = (cy - mc.IMAGE_HEIGHT / 2) * (float(mc.IMAGE_WIDTH) / resize_const) + mc.IMAGE_HEIGHT / 2.0
+    if mc.ENABLE_ENEMY_SELF_IDENTIFY == False:
+        enemy = []
+        for robo_bbox in robo_bboxes:
+            result = []
+            result = enemy.append(result)
+        return enemy
+    else:
+        enemy = []
+        for robo_bbox in robo_bboxes:
+            cx, cy, w, h = robo_bbox
+            resize_const = 620.0
+            aligned_w = w * (float(mc.IMAGE_WIDTH) / resize_const)
+            aligned_h = h * (float(mc.IMAGE_WIDTH) / resize_const)
+            aligned_cx = (cx - mc.IMAGE_WIDTH / 2) * (float(mc.IMAGE_WIDTH) / resize_const) + mc.IMAGE_WIDTH / 2.0 + 15.0
+            alinged_cy = (cy - mc.IMAGE_HEIGHT / 2) * (float(mc.IMAGE_WIDTH) / resize_const) + mc.IMAGE_HEIGHT / 2.0
 
-        aligned_robo_bbox = [aligned_cx, alinged_cy, aligned_w, aligned_h]
+            aligned_robo_bbox = [aligned_cx, alinged_cy, aligned_w, aligned_h]
 
-        x_min = int(aligned_robo_bbox[0] - aligned_robo_bbox[2]/2)
-        x_max = int(aligned_robo_bbox[0] + aligned_robo_bbox[2]/2)
-        y_min = int(aligned_robo_bbox[1] - aligned_robo_bbox[3]/2)
-        y_max = int(aligned_robo_bbox[1] + aligned_robo_bbox[3]/2)
+            x_min = int(aligned_robo_bbox[0] - aligned_robo_bbox[2]/2)
+            x_max = int(aligned_robo_bbox[0] + aligned_robo_bbox[2]/2)
+            y_min = int(aligned_robo_bbox[1] - aligned_robo_bbox[3]/2)
+            y_max = int(aligned_robo_bbox[1] + aligned_robo_bbox[3]/2)
 
-        x_min = in_range(x_min, 0, mc.IMAGE_WIDTH)
-        x_max = in_range(x_max, 0, mc.IMAGE_WIDTH)
-        y_min = in_range(y_min, 0, mc.IMAGE_HEIGHT)
-        y_max = in_range(y_max, 0, mc.IMAGE_HEIGHT)
+            x_min = in_range(x_min, 0, mc.IMAGE_WIDTH)
+            x_max = in_range(x_max, 0, mc.IMAGE_WIDTH)
+            y_min = in_range(y_min, 0, mc.IMAGE_HEIGHT)
+            y_max = in_range(y_max, 0, mc.IMAGE_HEIGHT)
 
-        x_min, x_max, y_min, y_max = filter_min_max(x_min, x_max, y_min, y_max)
+            x_min, x_max, y_min, y_max = filter_min_max(x_min, x_max, y_min, y_max)
 
-        # rgb -> bgr
-        robo_image = rgb_image[y_min:y_max, x_min:x_max, ::-1].copy()
-        result = judge_blue_red_hsv(robo_image)
-        result = enemy.append(result)
-        if save_image:
-            cv2.imwrite(
-                "/home/ubuntu/robot-prediction/src/robo_perception/scripts/visual/red_blue.jpg", rgb_image[:, :, ::-1])
-        if show_image:
-            cv2.rectangle(rgb_image, (int(x_min), int(y_min)),
-                          (int(x_max), int(y_max)), (255, 0, 0), 2)
-            # cv2.rectangle(im, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (255,0,0), 2)
-            cv2.imshow('rgb', rgb_image)
-            # cv2.imshow('robo_image', robo_image)
-    return enemy
+            # rgb -> bgr
+            robo_image = rgb_image[y_min:y_max, x_min:x_max, ::-1].copy()
+            result = judge_blue_red_hsv(robo_image)
+            result = enemy.append(result)
+            if save_image:
+                cv2.imwrite(
+                    "/home/ubuntu/robot-prediction/src/robo_perception/scripts/visual/red_blue.jpg", rgb_image[:, :, ::-1])
+            if show_image:
+                cv2.rectangle(rgb_image, (int(x_min), int(y_min)),
+                              (int(x_max), int(y_max)), (255, 0, 0), 2)
+                # cv2.rectangle(im, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (255,0,0), 2)
+                cv2.imshow('rgb', rgb_image)
+                # cv2.imshow('robo_image', robo_image)
+        return enemy
 
 # def filter_distance(distance):
 #     kmeans = KMeans(n_clusters=3, random_state=0).fit(distance.reshape(-1, 1))
@@ -387,6 +394,8 @@ def TsDet_callback(infrared_image, pointcloud):
             # 用于提取点云的范围大小
             pointcloud_w = int(3*armor_w/5)
             pointcloud_h = int(3*armor_h/5)
+            pointcloud_w = 5
+            pointcloud_h = 5
             if pointcloud_w > 25:
                 pointcloud_w = 25
             if pointcloud_h > 25:
@@ -506,6 +515,10 @@ def TsDet_callback(infrared_image, pointcloud):
 
             t.header.stamp = rospy.Time.now()
             t.header.frame_id = 'realsense_camera'
+            str_enemy_self = 'red'
+            t.child_frame_id = str_enemy_self + str(red_idx)
+            enemy.team.data = str_enemy_self + str(red_idx)
+            red_idx = red_idx + 1
             if enemy_self_list[object_idx] == 1:    # enemy(red)
                 str_enemy_self = 'red'
                 t.child_frame_id = str_enemy_self + str(red_idx)
@@ -521,7 +534,7 @@ def TsDet_callback(infrared_image, pointcloud):
                 t.child_frame_id = str_enemy_self + str(death_idx)
                 enemy.team.data = str_enemy_self + str(death_idx)
                 death_idx = death_idx + 1
-            print("enemy or self: ", str_enemy_self)
+            #print("enemy or self: ", str_enemy_self)
 
             red_num = red_idx
             blue_num = blue_idx

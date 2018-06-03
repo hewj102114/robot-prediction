@@ -462,7 +462,7 @@ def TsDet_callback(infrared_image, pointcloud):
 
             if mc.DEBUG:
                 print('enemy position:', avgX, avgY, avgZ)
-
+        align_image = []
         enemy_self_list = enemy_self_identify(align_image, robo_bboxes)
         # 检测完敌人, 对得到的距离信息进行处理
         # tf 包转换
@@ -682,7 +682,7 @@ TFinit()
 DetectInit()
 rgb_sub = message_filters.Subscriber('camera/infra1/image_rect_raw', Image)
 #subodom = rospy.Subscriber('odom', Odometry, callback_odom)
-subrgb = rospy.Subscriber('camera/color/image_raw', Image, callback_rgb)
+#subrgb = rospy.Subscriber('camera/color/image_raw', Image, callback_rgb)
 subodom = rospy.Subscriber('odom', Odometry, callback_odom)
 team = rospy.Subscriber('team/info', TeamInfo, callback_team)
 pc_sub = message_filters.Subscriber('camera/points', PointCloud2)

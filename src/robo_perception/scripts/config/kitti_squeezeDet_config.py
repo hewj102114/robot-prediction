@@ -47,7 +47,7 @@ def kitti_squeezeDet_config():
   
   mc.DEBUG = False
   mc.ENABLE_ENEMY_SELF_IDENTIFY = False
-  
+
   mc.SAVE_NUM = 10000
   return mc
 

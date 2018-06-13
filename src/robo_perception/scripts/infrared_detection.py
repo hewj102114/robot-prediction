@@ -255,7 +255,7 @@ def judge_armor(robo_bbox, final_boxes, armor_idx):
 
 
 def judge_robot_bbox(robo_bbox, final_boxes, final_class):
-    # 判断 robo_bbox 是否是违法的(误检)
+    # 判断 robo_bbox 是否是违法的(误检), 检测到的装甲板和轮子的中心必须位于 robot 的 bounding box 之中
     armor_flag = True
     wheel_flag = True
     robo_cx, robo_cy, robo_w, robo_h = robo_bbox[0], robo_bbox[1], robo_bbox[2], robo_bbox[3]
@@ -287,25 +287,22 @@ def judge_robot_bbox(robo_bbox, final_boxes, final_class):
 
 
 def TsDet_callback(infrared_image, pointcloud):
-    #print("====================================new image======================================")
-    # print("===================================================================================")
     global count, sess, model, mc, video, frame_rate_list, frame_rate_idx, frame_rate, align_image, odom_yaw, odom_pos_x, odom_pos_y, odom_vel_x, odom_vel_y
     global last_enemy_position, lose_frame_count
-    #print('I here rgb and pointcloud !', count)
     count = count + 1
 
     bridge = CvBridge()
+    # read image
     try:
-        cv_image_rgb = bridge.imgmsg_to_cv2(
-            infrared_image, desired_encoding="8UC1")
-        cv_image_rgb = cv2.cvtColor(cv_image_rgb, cv2.COLOR_GRAY2RGB)
+        cv_image_infrared = bridge.imgmsg_to_cv2(infrared_image, desired_encoding="8UC1")
+        cv_image_infrared = cv2.cvtColor(cv_image_infrared, cv2.COLOR_GRAY2RGB)
     except CvBridgeError as error:
         print(error)
 
     times = {}
     t_start = time.time()
 
-    im = cv_image_rgb
+    im = cv_image_infrared
     im = im.astype(np.float32, copy=False)
     im = cv2.resize(im, (mc.IMAGE_WIDTH, mc.IMAGE_HEIGHT))
     input_image = im - mc.BGR_MEANS
@@ -326,8 +323,7 @@ def TsDet_callback(infrared_image, pointcloud):
                                                                     det_probs[0],
                                                                     det_class[0])
     # 按照阈值筛选bbox
-    keep_idx = np.squeeze(np.argwhere(
-        np.array(final_probs) > mc.PLOT_PROB_THRESH))
+    keep_idx = np.squeeze(np.argwhere(np.array(final_probs) > mc.PLOT_PROB_THRESH))
 
     # 得到筛选后的bbox
     final_boxes = np.array(final_boxes)[keep_idx, :]
@@ -344,9 +340,6 @@ def TsDet_callback(infrared_image, pointcloud):
     robo_position = []
     roi = [[0, 0], [0, 0]]
     rois = []
-    if mc.DEBUG:
-        print("bboxes: %s, probs: %s, class: %s" %
-              (final_class, final_probs, final_class))
 
     # TODO: 距离太远的时候, 检测不到轮子，只能检测到车身
     # TODO: 距离太近的时候, 只能检测到轮子和装甲板和轮子, 检测不到车身
@@ -360,52 +353,40 @@ def TsDet_callback(infrared_image, pointcloud):
     enemy_position.header.frame_id = 'enemy'
     # 必须检测到车, 可能检测到轮子和装甲板才认为是真真检测到车
     if len(final_boxes) > 0 and np.any(final_class == 0) and (np.any(final_class == 1) or np.any(final_class == 2)):
-        # judge detect how much robots
-        robot_final_idx = np.array(np.where(final_class == 0))
-        armor_idx = np.array(np.where(final_class == 2))
-
-        # 如果一个robot的bbox中没有轮子和装甲板, 认为这个bbox是误检
+        robot_final_idx = np.array(np.where(final_class == 0))      # robot index
+        armor_idx = np.array(np.where(final_class == 2))            # armor index
+        
+        # robot's number
         for _ in range(robot_final_idx.shape[1]):
             robo_idx = robot_final_idx[0, _]
-            robo_bbox = final_boxes[robo_idx, :]
-            # 获取车bbox的坐标, 宽度和高度
+            robo_bbox = final_boxes[robo_idx, :]                    # robot's bounding boxes
             cx, cy, w, h = robo_bbox[0], robo_bbox[1], robo_bbox[2], robo_bbox[3]
-            #if cx < 106 or cx > 723 or cy < 65 or cy > 373:
-            if cx < 106 or cx > 723 or cy < 65 or cy > 373:
-                print("this robot bbox is illegal, over edge!!!")
-                continue
 
             robo_bbox_flag = judge_robot_bbox(robo_bbox, final_boxes, final_class)  # 过滤掉测距相同的 robot bbox
             if not robo_bbox_flag:
                 continue
 
-            armor_bbox = judge_armor(robo_bbox, final_boxes, armor_idx)
-
-            t_some_start = time.time()
-            # armor_bbox = robo_bbox
+            armor_bbox = judge_armor(robo_bbox, final_boxes, armor_idx)             # order the armor bounding boxes by robot bounding boxes
             armor_cx, armor_cy, armor_w, armor_h = armor_bbox[0], armor_bbox[1], armor_bbox[2], armor_bbox[3]
-            if armor_cx < 106 or armor_cx > 723 or armor_cy < 65 or armor_cy > 373:
-            #if armor_cx < 106 or armor_cx > 723 or armor_cy < 65 or armor_cy > 373:
-                print("this armor bbox is illegal, over edge!!!")
-                continue
 
             robo_bboxes.append(robo_bbox)
             armor_bboxes.append(armor_bbox)
-            # 用于提取点云的范围大小
-            pointcloud_w = int(3*armor_w/5)
+            
+            pointcloud_w = int(3*armor_w/5)         # 用于提取点云的范围大小
             pointcloud_h = int(3*armor_h/5)
+            
             pointcloud_w = 5
             pointcloud_h = 5
-            if pointcloud_w > 25:
-                pointcloud_w = 25
-            if pointcloud_h > 25:
-                pointcloud_h = 25
-
+            
             # 对点云进行约束, 使用装甲板检测的结果
             if pointcloud_w > armor_bbox[2]:
                 pointcloud_w = armor_bbox[2]
+                if pointcloud_w > 25:
+                    pointcloud_w = 25
             if pointcloud_h > armor_bbox[3]:
                 pointcloud_h = armor_bbox[3]
+                if pointcloud_h > 25:
+                    pointcloud_h = 25
 
             # 使用中心位置的 pointcloud_w*pointcloud_h 的点云计算距离
             # x_ = np.arange(int(cx - pointcloud_w/2), int(cx + pointcloud_w/2), 1)
@@ -422,20 +403,15 @@ def TsDet_callback(infrared_image, pointcloud):
             roi = [[x, y] for x in x_ for y in y_]
 
             rois.append(roi)
-            # 提取特定位置的点云
+            
 
-            points = list(pc2.read_points(
-                pointcloud, skip_nans=False, field_names=("x", "y", "z"), uvs=roi))
+            points = list(pc2.read_points(pointcloud, skip_nans=False, field_names=("x", "y", "z"), uvs=roi))     # 提取特定位置的点云
             robo_pointcloud = np.array(points)
 
             # 对提取到的点云进行 reshape
-            t_nan_tart = time.time()
-            positionX = robo_pointcloud[:,
-                                        0].reshape(-1, pointcloud_w * pointcloud_h).squeeze()
-            positionY = robo_pointcloud[:,
-                                        1].reshape(-1, pointcloud_w * pointcloud_h).squeeze()
-            positionZ = robo_pointcloud[:,
-                                        2].reshape(-1, pointcloud_w * pointcloud_h).squeeze()
+            positionX = robo_pointcloud[:, 0].reshape(-1, pointcloud_w * pointcloud_h).squeeze()
+            positionY = robo_pointcloud[:, 1].reshape(-1, pointcloud_w * pointcloud_h).squeeze()
+            positionZ = robo_pointcloud[:, 2].reshape(-1, pointcloud_w * pointcloud_h).squeeze()
 
             # 剔除距离为 nan 的点
             positionX = positionX[np.logical_not(np.isnan(positionX))]
@@ -519,22 +495,7 @@ def TsDet_callback(infrared_image, pointcloud):
             t.child_frame_id = str_enemy_self + str(red_idx)
             enemy.team.data = str_enemy_self + str(red_idx)
             red_idx = red_idx + 1
-            if enemy_self_list[object_idx] == 1:    # enemy(red)
-                str_enemy_self = 'red'
-                t.child_frame_id = str_enemy_self + str(red_idx)
-                enemy.team.data = str_enemy_self + str(red_idx)
-                red_idx = red_idx + 1
-            if enemy_self_list[object_idx] == 0:
-                str_enemy_self = 'blue'
-                t.child_frame_id = str_enemy_self + str(blue_idx)
-                enemy.team.data = str_enemy_self + str(blue_idx)
-                blue_idx = blue_idx + 1
-            if enemy_self_list[object_idx] == 2:
-                str_enemy_self = 'death'
-                t.child_frame_id = str_enemy_self + str(death_idx)
-                enemy.team.data = str_enemy_self + str(death_idx)
-                death_idx = death_idx + 1
-            #print("enemy or self: ", str_enemy_self)
+            print("enemy or self: ", str_enemy_self)
 
             red_num = red_idx
             blue_num = blue_idx
@@ -575,7 +536,6 @@ def TsDet_callback(infrared_image, pointcloud):
     pub.publish(enemy_position)
     t_filter = time.time()
 
-    #t_filter = time.time()
     times['filter'] = t_filter - t_detect
     times['total'] = time.time() - t_start
 
@@ -627,35 +587,6 @@ def TsDet_callback(infrared_image, pointcloud):
             cv2.imshow('demo', im)
             cv2.waitKey(3)
 
-            # Im_to_ros = Image()
-            # try:
-            #     Im_to_ros = bridge.cv2_to_imgmsg(im, "bgr8")
-            # except CvBridgeError as e:
-            #     print(e)
-            # Im_to_ros.header.stamp = rospy.Time.now()
-            # Im_to_ros.header.frame_id = 'camera_link'
-            # pub_dr.publish(Im_to_ros)
-
-
-# def callback_odom(odom):
-#     global qn_odom, odom_pos_x, odom_pos_y
-#     # only yaw are available
-#     odom_pos_x = odom.pose.pose.position.x
-#     odom_pos_y = odom.pose.pose.position.y
-#     qn_odom = [odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z,
-#               odom.pose.pose.orientation.w]
-#     # (odom_roll,odom_pitch,odom_yaw) = euler_from_quaternion(qn_odom)
-
-
-def callback_rgb(rgb):
-    global align_image
-    bridge = CvBridge()
-    try:
-        align_image = bridge.imgmsg_to_cv2(rgb, desired_encoding="8UC3")
-
-    except CvBridgeError as error:
-        print(error)
-
 
 def callback_odom(odom):
     global odom_yaw, odom_pos_x, odom_pos_y, odom_vel_x, odom_vel_y
@@ -670,29 +601,19 @@ def callback_odom(odom):
                odom.pose.pose.orientation.z, odom.pose.pose.orientation.w]
     (odom_roll, odom_pitch, odom_yaw) = euler_from_quaternion(qn_odom)
 
-def callback_team(team):
-    global connection_status, team_hp, global_team_x, global_team_y
-    connection_status = team.connection
-    team_hp = team.remainingHP
-    global_team_x = team.pose.position.x
-    global_team_y = team.pose.position.y 
-
 rospy.init_node('rgb_detection')
 TFinit()
 DetectInit()
+# subscribe
 rgb_sub = message_filters.Subscriber('camera/infra1/image_rect_raw', Image)
-#subodom = rospy.Subscriber('odom', Odometry, callback_odom)
-#subrgb = rospy.Subscriber('camera/color/image_raw', Image, callback_rgb)
 subodom = rospy.Subscriber('odom', Odometry, callback_odom)
-team = rospy.Subscriber('team/info', TeamInfo, callback_team)
 pc_sub = message_filters.Subscriber('camera/points', PointCloud2)
 
+# publish
 pub = rospy.Publisher('infrared_detection/enemy_position',ObjectList, queue_size=1)
 
-TsDet = message_filters.ApproximateTimeSynchronizer(
-    [rgb_sub, pc_sub], queue_size=5, slop=0.1, allow_headerless=False)
+TsDet = message_filters.ApproximateTimeSynchronizer([rgb_sub, pc_sub], queue_size=5, slop=0.1, allow_headerless=False)
 TsDet.registerCallback(TsDet_callback)
-
 
 rospy.spin()
 video.release()

@@ -873,7 +873,6 @@ VelInfo RoboControl::ctl_chassis(int xy_mode, int yaw_mode, float goal_x, float 
     * 功能说明：控制底盘硬件
     * 参数说明：xy_mode: 控制底盘的位置, yaw_mode: 控制地盘的角度, (goal_x, goal_y, goal_yaw): 控制地盘的位置和角度
     * 函数返回：返回底盘的转动模式, 位置和角度
-    * TODO: 1. 测试
     *************************************************************************/
     // 定义publish的值
     geometry_msgs::Pose target_pose;

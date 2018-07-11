@@ -1,0 +1,28 @@
+<launch>
+<node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode">
+  <param name="serial_port"         type="string" value="/dev/ttyUSBA0"/>  
+  <param name="serial_baudrate"     type="int"    value="115200"/>
+  <param name="frame_id"            type="string" value="laser"/>
+  <param name="inverted"            type="bool"   value="false"/>
+  <param name="angle_compensate"    type="bool"   value="true"/>
+</node>
+<node
+    name="tf_map_odom"
+    pkg="tf"
+    type="static_transform_publisher"
+    args="-1 -1 0 0 0 0 map odom 10" />
+<node
+    name="tf_laser_base"
+    pkg="tf"
+    type="static_transform_publisher"
+    args="0 0 0 3.14 0 0 base_link laser 10" />
+
+<node pkg="robo_navigation" type="lidar_nav" name="lidar_nav" output="screen">
+<param name="Kp_linear"  type="double" value="1.5"/>
+<param name="Ki_linear"  type="double" value="0.1"/>
+<param name="Kd_linear"  type="double" value="0"/>
+<param name="Kp_angular"  type="double" value="1.6"/>
+<param name="Ki_angular"  type="double" value="0.1"/>
+<param name="Kd_angular"  type="double" value="0"/>
+</node>
+</launch>

@@ -6,8 +6,8 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "robo_control");
     ros::NodeHandle nh;
     ros::NodeHandle private_nh("~");
-    
-	vector<float> pointA;
+
+    vector<float> pointA;
     vector<float> pointB;
     vector<float> pointC;
     vector<float> pointD;
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 
         case 0:
         {
-            robo_ctl.sent_mcu_vel_msg = robo_ctl.ctl_chassis(1, 1, 0, 0, 0);
+            robo_ctl.sent_mcu_vel_msg = robo_ctl.ctl_chassis(1, 1, 0, 0, 0);    // stay here
             break;
         }
 

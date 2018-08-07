@@ -59,55 +59,82 @@ from robo_perception.msg import Object
 from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import PoseStamped
 from robo_control.msg import GameInfo
+from robo_vision.msg import ArmorInfo
+ #系统延时系数，单位秒
+ #VER代表垂直枪口方向，PAR代表水平枪口方向
+T_PNP_DELAY_VER = 0.05
+T_RS_DELAY_VER = 5 # all set!
+T_PNP_DELAY_PAR = 0.00 
+T_RS_DELAY_PAR = 1.6
 
-T_PNP_DELAY = 0.28 #系统延时系数，单位秒
-T_RS_DELAY = 0.06
+PNP_MAX_PREDICT_DISTANCE = 1.2
+
 RS_INIT = True
 PNP_INIT = True
 
-ENABLE_PREDICT = True
-PNP_LAST_AVAILABLE = False
-PNP_DATA_AVAILABLE = False
-RS_LAST_AVAILABLE = False
-RS_DATA_AVAILABLE = False
+ENABLE_PREDICT = True #启动预测标志位（从策略层面接收）
+PNP_LAST_AVAILABLE = False #PNP上一帧可行标志位
+PNP_DATA_AVAILABLE = False #PNP数据可行标志位
+RS_LAST_AVAILABLE = False #Realsense上一帧可行标志位
+RS_DATA_AVAILABLE = False #Realsense数据可行标志位
+UNABLE_PREDICT = 0 #无法预测标志位（发送）
+TEMPERAL_LOST = 0#（暂时性数据丢失）
 RS_PREDICT_INIT = True
 PNP_PREDICT_INIT = True
-UNABLE_PREDICT = 0
-TEMPERAL_LOST = 0
-RS_PREDICT_INIT = True
-PNP_PREDICT_INIT = True
-TARGET_RECETIVED = False
+TARGET_RECETIVED = False #接收到目标标志位
 PNP_UKF_AVAILABLE = False
 RS_UKF_AVAILABLE = False
-MAX_PREDICT_ANGLE = 6 
 
-BULLET_SPEED = 16.1
+MAX_VERTICLE_ANGLE = 5 #左右预瞄最大角度
+
+MAX_PARALLEL_ANGLE = 5 #高度预瞄准最大角度
+
+MAX_GRAVITAL_ANGEL = -3.0
+
+GRAVITY = 9.8 #重力加速度 9.8 m/s^2
+BULLET_SPEED = 18.1 #子弹速度
+BULLET_FRICTION = 0 #子弹空气摩擦系数
+GUN_ARMOR_HEIGHT = 0.28 #枪口到装甲板的水平距离为28CM
 PNP_CLOSE_THRESH = 10 #判断pnp是否瞄准到了正确目标
 RS_CLOSE_THRESH = 10 #判断rs是否瞄准到了正确目标
-LOST_TRESH = 10
+RS_LOST_TRESH = 10
+PNP_LOST_TRESH = 100 #丢失标志位，超过15帧表示丢失目标
+
+GIMBAL_TO_BASE = 0.15 # gimbal to rplidar(base_link) distance 15CM
+GIMBAL_TO_REALSENSE = 0.02 #gimbal to realsensen distance 15CM
 
 #LOW PASS FILTER
-LPF_ORDER = 7
+LPF_ORDER = 7 #滤波器阶数
 PNP_LPS_SAMPLING_FREQ = 100.0       # sample rate, Hz
-PNP_LPF_CUTOFF = 10  # desired cutoff frequency of the filter, Hz
+PNP_LPF_CUTOFF_VER = 10  # desired cutoff frequency of the filter, Hz
+PNP_LPF_CUTOFF_PAR = 10
 
 RS_LPS_SAMPLING_FREQ = 100.0       # sample rate, Hz
-RS_LPF_CUTOFF = 30  # desired cutoff frequency of the filter, Hz
+RS_LPF_CUTOFF_VER = 30  # desired cutoff frequency of the filter, Hz
+RS_LPF_CUTOFF_PAR = 26
 
-lpf_input_list = deque([0,0,0,0,0],maxlen = 6)
+lpf_input_list_par_rs = deque([0,0,0,0,0],maxlen = 6)
+lpf_input_list_ver_rs = deque([0,0,0,0,0],maxlen = 6)
+lpf_input_list_par_pnp = deque([0,0,0,0,0],maxlen = 6)
+lpf_input_list_ver_pnp = deque([0,0,0,0,0],maxlen = 6)
 
 ukf_result = []
 robo_vel_x = robo_vel_y = 0
 pnp_vel_x = pnp_vel_y = pnp_pos_x = pnp_pos_y = last_pnp_pos_x = last_pnp_pos_y = 0
 odom_yaw = odom_pos_x = odom_pos_y = odom_vel_x = odom_vel_y = 0
 rs_pos_x = rs_pos_y = rs_vel_x = rs_vel_y = last_rs_pos_x = last_rs_pos_y = 0
-gimbal_yaw = gimbal_dtheta = 0
-aimtheta  = predict_angle = 0
+gimbal_yaw = gimbal_dtheta = gimbal_pitch = 0
+aimtheta  = verticle_angle = global_aimtheta = 0
 ukf_out_pos_x = ukf_out_pos_y = ukf_out_vel_x = ukf_out_vel_y = 0
 pnp_lost_counter = rs_lost_counter = 0
 rs_lost_time = []
 pnp_lost_time = []
 aim_target_x = aim_target_y = 0
+aim_relative_distance = 0
+rs_xy_distance = pnp_xy_distance = 0 
+predict_xy_distance = 0
+parallel_angel = 0
+gravital_angel = 0
 
 def butter_lowpass(cutoff, fs, order=5):
     nyq = 0.5 * fs
@@ -154,8 +181,8 @@ def h_cv_6(x):
 def UKFRsInit(in_dt, init_x):
     global ukf_rs
 
-    p_std_x, p_std_y = 0.002, 0.002
-    v_std_x, v_std_y = 0.002, 0.002
+    p_std_x, p_std_y = 0.001, 0.001
+    v_std_x, v_std_y = 0.001, 0.001
     dt = in_dt 
 
 
@@ -170,8 +197,8 @@ def UKFRsInit(in_dt, init_x):
 def UKFPnpInit(in_dt, init_x):
     global ukf_pnp
 
-    p_std_x, p_std_y = 0.04, 0.04
-    v_std_x, v_std_y = 0.3, 0.3
+    p_std_x, p_std_y = 0.02, 0.02
+    v_std_x, v_std_y = 0.2, 0.2
     dt = in_dt 
 
 
@@ -179,9 +206,9 @@ def UKFPnpInit(in_dt, init_x):
     ukf_pnp = UKF(dim_x=4, dim_z=4, fx=f_cv, hx=h_cv, dt=dt, points=sigmas)
     ukf_pnp.x = init_x
     ukf_pnp.R = np.diag([p_std_x, v_std_x, p_std_y, v_std_y]) 
-    ukf_pnp.Q[0:2, 0:2] = Q_discrete_white_noise(2, dt=dt, var=2)
-    ukf_pnp.Q[2:4, 2:4] = Q_discrete_white_noise(2, dt=dt, var=2)
-    ukf_pnp.P = np.diag([8, 1.5  ,5, 1.5])
+    ukf_pnp.Q[0:2, 0:2] = Q_discrete_white_noise(2, dt=dt, var=0.2)
+    ukf_pnp.Q[2:4, 2:4] = Q_discrete_white_noise(2, dt=dt, var=0.2)
+    ukf_pnp.P = np.diag([8, 1.5 ,5, 1.5])
 
 def TFinit():
     global tfBuffer
@@ -192,7 +219,7 @@ def callback_enemy(enemy):
     global enemy_num, team_num, tfBuffer, enemy_object_trans, team_object_trans, aim_target_x, aim_target_y, rs_last_time, rs_lost_time, rs_lost_counter
     global rs_pos_x, rs_pos_y, rs_vel_x, rs_vel_y, last_rs_pos_x, last_rs_pos_y, odom_yaw, odom_pos_x, odom_pos_y
     global ENABLE_PREDICT, RS_DATA_AVAILABLE, RS_LAST_AVAILABLE, RS_INIT,RS_PREDICT_INIT, ukf_rs,RS_UKF_AVAILABLE
-    global ukf_rs_pos_x,ukf_rs_pos_y, ukf_rs_vel_x,ukf_rs_vel_y
+    global ukf_rs_pos_x,ukf_rs_pos_y, ukf_rs_vel_x,ukf_rs_vel_y, rs_xy_distance
     if RS_INIT == True:
         print "realsense callback init Finished!"
         rs_last_time = enemy.header.stamp.secs + enemy.header.stamp.nsecs * 10**-9
@@ -208,14 +235,16 @@ def callback_enemy(enemy):
         enemy_object_trans = []
         enemy_num = 0
         team_num = 0
-        enemy_0_x = enemy_0_y = enemy_1_x = enemy_1_y = 999
+        global_enemy_0_x = global_enemy_0_y = global_enemy_1_x = global_enemy_1_y = 999
+        rel_enemy_0_x = rel_enemy_0_y = rel_enemy_1_x = rel_enemy_1_y = 0
         FIND_RS = False
         rs_time = enemy.header.stamp.secs + enemy.header.stamp.nsecs * 10**-9
         dt = rs_time - rs_last_time
-        if 1/dt<30:
-            print 'WARNING!!!,detection frequency to low! Graph card may need COOLING operation!'
-        if enemy.num == 0:
-            print 'NOTHING'
+
+        # if enemy.num == 0:
+        #     print 'NOTHING'
+        # elif enemy.lost_frame_counter !=0:
+        #     print 'realsense lost', enemy.lost_frame_counter
         for i in range(int(enemy.num)):
             object_name =  enemy.object[i].team.data
             #decoding the enemy position
@@ -233,7 +262,10 @@ def callback_enemy(enemy):
                 # #print rs_global_x,rs_global_y,'odom_yaw',odom_yaw,'theta',theta,'odom_pos_x',odom_pos_x,'odom_pos_y',odom_pos_y
                 rs_global_x = enemy.object[i].globalpose.position.x
                 rs_global_y = enemy.object[i].globalpose.position.y
-                enemy_object_trans.append([rs_global_x,rs_global_y])
+                #Trans relative to gimbal axis
+                rs_rel_x = enemy.object[i].pose.position.x + GIMBAL_TO_REALSENSE
+                rs_rel_y = enemy.object[i].pose.position.y
+                enemy_object_trans.append([rs_global_x,rs_global_y, rs_rel_x, rs_rel_y])
 
             elif object_name == 'blue0':
                 team_num = team_num + 1
@@ -241,39 +273,64 @@ def callback_enemy(enemy):
                 
         #object judgement
         if enemy_num == 1:
-            enemy_0_x = enemy_object_trans[0][0]
-            enemy_0_y = enemy_object_trans[0][1]
-            enemy_1_x = 999
-            enemy_1_y = 999
-        elif enemy_num == 2:
-            enemy_0_x = enemy_object_trans[0][0]
-            enemy_0_y = enemy_object_trans[0][1]
-            enemy_1_x = enemy_object_trans[1][0]
-            enemy_1_y = enemy_object_trans[1][1]
-        else:
-            enemy_0_x = 999
-            enemy_0_y = 999
-            enemy_1_x = 999
-            enemy_1_y = 999
+            global_enemy_0_x = enemy_object_trans[0][0]
+            global_enemy_0_y = enemy_object_trans[0][1]
+            rel_enemy_0_x = enemy_object_trans[0][2]
+            rel_enemy_0_y = enemy_object_trans[0][3]
 
-        if np.sqrt((aim_target_x - enemy_0_x) ** 2 + (aim_target_y - enemy_0_y) ** 2) < RS_CLOSE_THRESH:
-            rs_pos_x = enemy_0_x
-            rs_pos_y = enemy_0_y
+            global_enemy_1_x = 999
+            global_enemy_1_y = 999
+            rel_enemy_1_x = 0
+            rel_enemy_1_y = 0
+
+        elif enemy_num == 2:
+            global_enemy_0_x = enemy_object_trans[0][0]
+            global_enemy_0_y = enemy_object_trans[0][1]
+            rel_enemy_0_x = enemy_object_trans[0][2]
+            rel_enemy_0_y = enemy_object_trans[0][3]
+
+            global_enemy_1_x = enemy_object_trans[1][0]
+            global_enemy_1_y = enemy_object_trans[1][1]
+            rel_enemy_1_x = enemy_object_trans[1][2]
+            rel_enemy_1_y = enemy_object_trans[1][3]
+
+        else:
+            global_enemy_0_x = 999
+            global_enemy_0_y = 999
+            rel_enemy_0_x = 0
+            rel_enemy_0_y = 0
+
+            global_enemy_1_x = 999
+            global_enemy_1_y = 999
+            rel_enemy_1_x = 0
+            rel_enemy_1_y = 0
+
+        if np.sqrt((aim_target_x - global_enemy_0_x) ** 2 + (aim_target_y - global_enemy_0_y) ** 2) < RS_CLOSE_THRESH:
+            rs_pos_x = rel_enemy_0_x
+            rs_pos_y = rel_enemy_0_y
             FIND_RS = True
-        elif np.sqrt((aim_target_x - enemy_1_x) ** 2 + (aim_target_y - enemy_1_y) ** 2) < RS_CLOSE_THRESH:
-            rs_pos_x = enemy_1_x
-            rs_pos_y = enemy_1_y
+        elif np.sqrt((aim_target_x - global_enemy_1_x) ** 2 + (aim_target_y - global_enemy_1_y) ** 2) < RS_CLOSE_THRESH:
+            rs_pos_x = rel_enemy_1_x
+            rs_pos_y = rel_enemy_1_y
             FIND_RS = True
         else:
             # no available data, then not last data.
             FIND_RS = False
             RS_LAST_AVAILABLE = False
-
+            
+        if enemy.lost_frame_counter !=0:
+            # realsense lost frame!!!!!!
+            FIND_RS = False
+            RS_LAST_AVAILABLE = False
             
         if FIND_RS == True:
+            # if 1/dt<26:
+            #     print 'WARNING!!!,detection frequency to low! Graph card may need COOLING operation!'
             #print 'USE RS PREDICTING'
             rs_lost_time = []
             rs_lost_counter = 0
+            #使用相对位置计算距离，如果不使用相对位置做预测则需要更改
+            rs_xy_distance = np.sqrt(rs_pos_x**2 +rs_pos_y**2)
             if RS_LAST_AVAILABLE:
                 #last data available, use to update the speed
                 rs_vel_x = (rs_pos_x - last_rs_pos_x) / dt
@@ -282,8 +339,7 @@ def callback_enemy(enemy):
             else:
                 RS_DATA_AVAILABLE = False
                 rs_lost_counter = rs_lost_counter + 1
-
-            
+  
             RS_LAST_AVAILABLE = True
             last_rs_pos_x = rs_pos_x
             last_rs_pos_y = rs_pos_y
@@ -318,17 +374,13 @@ def callback_enemy(enemy):
         #第一次直接初始化，第二次再更新
         if RS_DATA_AVAILABLE == False:
             RS_PREDICT_INIT = True 
-
-        
         #print 'RS_LAST_AVAILABLE',RS_LAST_AVAILABLE,'RS_DATA_AVAILABLE',RS_DATA_AVAILABLE,rs_lost_counter
-
-        
 
 def callback_pnp(pnp):
     global pnp_pos_x, pnp_pos_y, aim_target_x, aim_target_y, pnp_lost_counter, last_pnp_pos_x, last_pnp_pos_y, pnp_vel_x, pnp_vel_y
     global pnp_last_time, pnp_lost_time, tfBuffer, pnp_trans, ukf_pnp
     global PNP_DATA_AVAILABLE, PNP_LAST_AVAILABLE, PNP_INIT, ENABLE_PREDICT, PNP_PREDICT_INIT,PNP_UKF_AVAILABLE
-    global ukf_pnp_pos_x,ukf_pnp_pos_y, ukf_pnp_vel_x,ukf_pnp_vel_y
+    global ukf_pnp_pos_x,ukf_pnp_pos_y, ukf_pnp_vel_x,ukf_pnp_vel_y, pnp_xy_distance,GIMBAL_TO_BASE
 
     if PNP_INIT == True:
         print "pnp callback init Finished!"
@@ -345,16 +397,20 @@ def callback_pnp(pnp):
 
 
         #print pnp.pose.position.x,pnp.pose.position.y,pnp.pose.position.z
-        if pnp.pose.position.x != 0 and pnp.pose.position.y != 0:
+        if pnp.target.pose_base.x != 0 and pnp.target.pose_base.y != 0:
             FIND_PNP = True
 
-            try:
-                pnp_trans = tfBuffer.lookup_transform('odom', 'enemy_pnp_link', rospy.Time(0))
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-                print('PNP TF TRANS TRANS FAIL! check your code')
-            #print pnp_trans
-            pnp_pos_x = pnp_trans.transform.translation.x
-            pnp_pos_y = pnp_trans.transform.translation.y
+            # try:
+            #     pnp_trans = tfBuffer.lookup_transform('odom', 'enemy_pnp_link', rospy.Time(0))
+            # except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            #     print('PNP TF TRANS TRANS FAIL! check your code')
+            # #print pnp_trans
+            # pnp_pos_x = pnp_trans.transform.translation.x
+            # pnp_pos_y = pnp_trans.transform.translation.y
+            
+            #pnp x y is relative to gimbal ,bot odom
+            pnp_pos_x = pnp.target.pose_base.x - GIMBAL_TO_BASE
+            pnp_pos_y = pnp.target.pose_base.y
         else:
             FIND_PNP = False
 
@@ -368,6 +424,8 @@ def callback_pnp(pnp):
             #print 'USE PNP PREDICTING'
             pnp_lost_time = []
             pnp_lost_counter = 0
+            pnp_xy_distance = np.sqrt(pnp_pos_x**2 +pnp_pos_y**2)
+
             if PNP_LAST_AVAILABLE:
                 #last data available, use to update the speed
                 pnp_vel_x = (pnp_pos_x - last_pnp_pos_x) / dt
@@ -388,12 +446,12 @@ def callback_pnp(pnp):
             pnp_lost_time.append(dt)
             PNP_LAST_AVAILABLE = False
             PNP_DATA_AVAILABLE = False
-        #print 'PNP_DATA_AVAILABLE',PNP_DATA_AVAILABLE,'PNP_LAST_AVAILABLE',PNP_LAST_AVAILABLE
+        # print 'PNP_DATA_AVAILABLE',PNP_DATA_AVAILABLE,'PNP_LAST_AVAILABLE',PNP_LAST_AVAILABLE
         pnp_last_time = pnp_time
 
         PNP_UKF_AVAILABLE = False
         if PNP_PREDICT_INIT and PNP_DATA_AVAILABLE:
-            UKFPnpInit(0.01, np.array([pnp_pos_x, pnp_vel_x, pnp_pos_y, pnp_vel_y]))
+            UKFPnpInit(0.014, np.array([pnp_pos_x, pnp_vel_x, pnp_pos_y, pnp_vel_y]))
             ukf_pnp_pos_x = ukf_pnp.x[0]
             ukf_pnp_vel_x = ukf_pnp.x[1]
             ukf_pnp_pos_y = ukf_pnp.x[2]
@@ -413,11 +471,12 @@ def callback_pnp(pnp):
 
         if PNP_DATA_AVAILABLE == False:
             PNP_PREDICT_INIT = True 
+
         
          
         
                 
-#TODO see weather to combine self speed. or leave it to other code    
+  
 def callback_odom(odom):
     global odom_yaw, odom_pos_x, odom_pos_y, odom_vel_x, odom_vel_y
     #only yaw are available
@@ -432,70 +491,57 @@ def callback_odom(odom):
 
 
 def callback_target(target):
-    global aim_target_x, aim_target_y, ENABLE_PREDICT, aimtheta,tfBuffer,gimbal_yaw,odom_yaw,gimbal_dtheta,TARGET_RECETIVED
-    aim_target_x = target.pose.pose.position.x
-    aim_target_y = target.pose.pose.position.y
+    global aim_target_x, aim_target_y, ENABLE_PREDICT, aimtheta,tfBuffer,gimbal_yaw,odom_yaw,gimbal_dtheta,TARGET_RECETIVED, aim_relative_distance ,global_aimtheta
+    aim_target_x = target.object[0].globalpose.position.x
+    aim_target_y = target.object[0].globalpose.position.y
+    aim_target_rel_x = target.object[0].pose.position.x
+    aim_target_rel_y = target.object[0].pose.position.y
     TARGET_RECETIVED = False
-    if aim_target_x and aim_target_y != 0:
+    if aim_target_x !=0 and aim_target_y != 0:
         TARGET_RECETIVED = True
-        rs_trans = TransformStamped()
-        try:
-            rs_trans = tfBuffer.lookup_transform('odom', 'realsense_camera', rospy.Time(0))
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            print('realsense TF TRANS TRANS FAIL! check your code')
-        
-        #use sele as orign of axis
-        relative_x = aim_target_x - rs_trans.transform.translation.x
-        relative_y = aim_target_y - rs_trans.transform.translation.y
-        
-        # print rs_trans.transform.translation.x,rs_trans.transform.translation.y
-        # print 'aim_target_x',aim_target_x,'aim_target_y',aim_target_y
-        # print 'relative',relative_x,relative_y
-        #target 
-        aimtheta = np.arctan2(relative_y, relative_x)
+        aim_relative_distance = np.sqrt(aim_target_rel_x **2 + aim_target_rel_y ** 2)
 
+        aimtheta = np.arctan2(aim_target_rel_y, aim_target_rel_x)
+        global_aimtheta = aimtheta + odom_yaw
 
+        print aim_relative_distance, aimtheta, global_aimtheta
 
-
-        ENABLE_PREDICT = target.pose.pose.orientation.w
+        ENABLE_PREDICT = target.object[0].globalpose.orientation.w
 
 def callback_gimbal(gimbal):
-    global gimbal_yaw, BULLET_SPEED
+    global gimbal_yaw, BULLET_SPEED, gimbal_pitch
     gimbal_yaw = gimbal.gimbalAngleYaw*(np.pi/180)
+    gimbal_pitch = gimbal.gimbalAnglePitch*(np.pi/180)
     if gimbal.bulletSpeed > 0:
         BULLET_SPEED = gimbal.bulletSpeed
 
 rospy.init_node('ukf_predict_node')
 UKFRsInit(0.033,np.array([0., 0., 0., 0.]))
-UKFPnpInit(0.01,np.array([0., 0., 0., 0.,0.,0.]))
+UKFPnpInit(0.014,np.array([0., 0., 0., 0.,0.,0.]))
 TFinit()
 subenemy = rospy.Subscriber('infrared_detection/enemy_position', ObjectList, callback_enemy)
-subpnp = rospy.Subscriber('base/armor_pose', PoseStamped, callback_pnp)
+subpnp = rospy.Subscriber('base/armor_info', ArmorInfo, callback_pnp)
 subodom = rospy.Subscriber('odom', Odometry, callback_odom)
 subgimbal = rospy.Subscriber('base/game_info', GameInfo, callback_gimbal)
-subtarget = rospy.Subscriber('enemy/target', Odometry, callback_target)
+subtarget = rospy.Subscriber('enemy/target', ObjectList, callback_target,queue_size=1)
 
 pub_ukf_vel = rospy.Publisher('ukf/enemy', Odometry, queue_size=1)
 
-rate = rospy.Rate(30) # 40hz
+rate = rospy.Rate(60) # 30hz
 while not rospy.is_shutdown():
-    global BULLET_SPEED, pnp_pos_x, pnp_pos_y, pnp_vel_y, pnp_vel_x, gimbal_yaw, odom_vel_x, odom_vel_y,odom_yaw
-    global UNABLE_PREDICT, aimtheta, predict_angle, ukf_out_pos_x, ukf_out_pos_y, ukf_out_vel_x, ukf_out_vel_y
-    global rs_pos_x, rs_pos_y, rs_vel_x, rs_vel_y, last_pnp_pos_x, last_pnp_pos_y, rs_lost_counter, pnp_lost_counter
-    global LOST_TRESH, TEMPERAL_LOST,RS_DATA_AVAILABLE, PNP_DATA_AVAILABLE,gimbal_dtheta
-    global TARGET_RECETIVED, ukf_rs_pos_x,ukf_rs_pos_y, ukf_rs_vel_x,ukf_rs_vel_y,ukf_pnp_pos_x,ukf_pnp_pos_y, ukf_pnp_vel_x,ukf_pnp_vel_y
-    global PNP_UKF_AVAILABLE,RS_UKF_AVAILABLE, lpf_input_list, LPF_CUTOFF, LPS_SAMPLING_FREQ, LPF_ORDER
 
+    if pnp_xy_distance > PNP_MAX_PREDICT_DISTANCE:
+        PNP_UKF_AVAILABLE = False
 
     # 选择传感器预测优先级
     if RS_UKF_AVAILABLE:
         ukf_out_pos_x = ukf_rs_pos_x  
         ukf_out_vel_x = ukf_rs_vel_x
-        ukf_out_pos_y = ukf_rs_pos_y 
+        ukf_out_pos_y = ukf_rs_pos_y
         ukf_out_vel_y = ukf_rs_vel_y
         UNABLE_PREDICT = 0
         TEMPERAL_LOST = 0
-    elif PNP_UKF_AVAILABLE and 0:  
+    elif PNP_UKF_AVAILABLE:  
         ukf_out_pos_x = ukf_pnp_pos_x  
         ukf_out_vel_x = ukf_pnp_vel_x
         ukf_out_pos_y = ukf_pnp_pos_y 
@@ -507,7 +553,7 @@ while not rospy.is_shutdown():
         #print 'temperal unable to predict!','pnp_lost_counter',pnp_lost_counter,'rs_lost_counter',rs_lost_counter 
         TEMPERAL_LOST = 1
 
-    if pnp_lost_counter > LOST_TRESH and rs_lost_counter > LOST_TRESH:
+    if pnp_lost_counter > PNP_LOST_TRESH and rs_lost_counter > RS_LOST_TRESH:
         UNABLE_PREDICT = 1
         #print 'UNABLE TO PREDICT!!!!!!!!!!!!'
 
@@ -520,10 +566,10 @@ while not rospy.is_shutdown():
         global_gimbal_yaw = global_gimbal_yaw - 2 * np.pi
 
     
-    if PNP_UKF_AVAILABLE or RS_UKF_AVAILABLE:
-        print 'RS','X',rs_pos_x,'Y',rs_pos_y, 'VX',rs_vel_x,'VY',rs_vel_y,'RDA',RS_DATA_AVAILABLE
-        print 'PNP','X',pnp_pos_x,'Y',pnp_pos_y, 'VX',pnp_vel_x,'VY',pnp_vel_x,'PDA',PNP_DATA_AVAILABLE
-        print 'KALMAN', 'X',ukf_out_pos_x,'Y',ukf_out_pos_y, 'VX',ukf_out_vel_x,'VY',ukf_out_vel_y
+    # if PNP_UKF_AVAILABLE or RS_UKF_AVAILABLE:
+    #     print 'RS','X',rs_pos_x,'Y',rs_pos_y, 'VX',rs_vel_x,'VY',rs_vel_y,'RDA',RS_DATA_AVAILABLE
+    #     print 'PNP','X',pnp_pos_x,'Y',pnp_pos_y, 'VX',pnp_vel_x,'VY',pnp_vel_x,'PDA',PNP_DATA_AVAILABLE
+    #     print 'KALMAN', 'X',ukf_out_pos_x,'Y',ukf_out_pos_y, 'VX',ukf_out_vel_x,'VY',ukf_out_vel_y
 
     #   #
     #           #
@@ -538,51 +584,101 @@ while not rospy.is_shutdown():
 
     if RS_UKF_AVAILABLE:
         #计算相对速度
-        relative_speed_x = ukf_out_vel_x - odom_vel_x
-        relative_speed_y = ukf_out_vel_y - odom_vel_y
+        #rs_pos_x, rs_vel_x, rs_pos_y, rs_vel_y
+        relative_speed_x = rs_vel_x
+        relative_speed_y = rs_vel_y
         #print 'relative_speed_x',relative_speed_x,'relative_speed_y',relative_speed_y
         #计算水平于枪口方向的速度,trans to ploe axis then calculate verticle speed
         # target_speed = np.sqrt(relative_speed_x**2 + relative_speed_y**2)
         # target_theta = np.arctan2(relative_speed_y , relative_speed_x)
         # V_verticle = target_speed * np.sin(2 * np.pi - (global_gimbal_yaw + target_theta + 90))
         # print 'target_speed',target_speed, 'target_theta',target_theta,'V_verticle',V_verticle
-        V_verticle = relative_speed_x * np.sin(global_gimbal_yaw) + relative_speed_y * np.cos(global_gimbal_yaw)
-        #print 'V_verticle',V_verticle,'global_gimbal_yaw',global_gimbal_yaw,'relative_speed_x',relative_speed_x,'relative_speed_y',relative_speed_y
+        #V_verticle = relative_speed_x * np.sin(gimbal_yaw) + relative_speed_y * np.cos(gimbal_yaw)
+        V_verticle = -relative_speed_x * np.sin(gimbal_yaw) + relative_speed_y * np.cos(gimbal_yaw)
+        V_parallel = relative_speed_x * np.cos(gimbal_yaw) + relative_speed_y * np.sin(gimbal_yaw)
+        #print 'V_v',V_verticle,'V_p',V_parallel,'gimbal_yaw',gimbal_yaw,'re_speed_x',relative_speed_x,'rel_speed_y',relative_speed_y
         #print V_verticle, odom_yaw
         #计算检测到的目标和我自身的距离
-        distance_to_enemy = np.sqrt((ukf_out_pos_x - (odom_pos_x + 0.22*np.cos(odom_yaw)))**2 +(ukf_out_pos_y - (odom_pos_y+ 0.22*np.cos(odom_yaw)))**2)
-        #计算子弹飞行时间
-        T_FLY = distance_to_enemy / BULLET_SPEED
-        #反解算出需要的预瞄角度
-        predict_angle = np.arctan(V_verticle * (T_RS_DELAY + T_FLY) / distance_to_enemy)
+        #rs_distance_to_enemy = np.sqrt(rs_xy_distance **2 + GUN_ARMOR_HEIGHT **2)
 
-        lpf_input_list.append(predict_angle)
-        lpf_out_list = butter_lowpass_filter(lpf_input_list, RS_LPF_CUTOFF, RS_LPS_SAMPLING_FREQ, LPF_ORDER)
-        predict_angle = lpf_out_list[5]
+        #根据距离进行低通限制，保证枪口不会在近距离发生抖动
+        if rs_xy_distance > 2.7:
+            RS_LPF_CUTOFF = 30
+        elif rs_xy_distance < 2.7 and rs_xy_distance >1.5:
+            RS_LPF_CUTOFF = 28
+        elif rs_xy_distance < 1.5:
+            RS_LPF_CUTOFF = 25
+        predict_xy_distance = np.sqrt(ukf_out_pos_x**2 +ukf_out_pos_y**2)
+        #predict_distance_to_enemy = np.sqrt(predict_xy_distance **2 + GUN_ARMOR_HEIGHT **2)
+        
+        #T_FLY = rs_xy_distance / ((BULLET_SPEED + BULLET_FRICTION) * np.cos(gimbal_pitch))
+        PREDICT_T_FLY = rs_xy_distance / ((BULLET_SPEED + BULLET_FRICTION)* np.cos(gimbal_pitch))
+        #print 'PREDICT_T_FLY',PREDICT_T_FLY,'BULLET_SPEED',BULLET_SPEED,'BULLET_FRICTION',BULLET_FRICTION,'gimbal_pitch',gimbal_pitch,'cos',np.cos(gimbal_pitch)
+        #反解算出需要的预瞄角度
+        verticle_angle = np.arctan(V_verticle * (T_RS_DELAY_VER + PREDICT_T_FLY) / rs_xy_distance)
+
+        lpf_input_list_ver_rs.append(verticle_angle)
+        lpf_input_list_ver_rs = butter_lowpass_filter(lpf_input_list_ver_rs, RS_LPF_CUTOFF_VER, RS_LPS_SAMPLING_FREQ, LPF_ORDER)
+        lpf_input_list_ver_rs = deque(lpf_input_list_ver_rs.tolist(),maxlen = 6)
+        verticle_angle = lpf_input_list_ver_rs[5]
+
+        
+        parallel_angel = np.arctan(predict_xy_distance / GUN_ARMOR_HEIGHT) - np.arctan((predict_xy_distance + (PREDICT_T_FLY + T_RS_DELAY_PAR) * V_parallel) / GUN_ARMOR_HEIGHT)
+        
+        lpf_input_list_par_rs.append(parallel_angel)
+        lpf_input_list_par_rs = butter_lowpass_filter(lpf_input_list_par_rs, RS_LPF_CUTOFF_PAR, RS_LPS_SAMPLING_FREQ, LPF_ORDER)
+        lpf_input_list_par_rs = deque(lpf_input_list_par_rs.tolist(),maxlen = 6)
+        parallel_angel = lpf_input_list_par_rs[5]
+        # print 'rs_xy_distance',rs_xy_distance,'PREDICT_T_FLY',PREDICT_T_FLY,'V_parallel', V_parallel,'parallel_angel',parallel_angel,'verticle_angle',verticle_angle
 
     elif PNP_UKF_AVAILABLE:
         #计算相对速度
-        relative_speed_x = ukf_out_vel_x - odom_vel_x
-        relative_speed_y = ukf_out_vel_y - odom_vel_y
+        relative_speed_x = ukf_out_vel_x
+        relative_speed_y = ukf_out_vel_y
         #print 'relative_speed_x',relative_speed_x,'relative_speed_y',relative_speed_y
         #计算水平于枪口方向的速度,trans to ploe axis then calculate verticle speed
         # target_speed = np.sqrt(relative_speed_x**2 + relative_speed_y**2)
         # target_theta = np.arctan2(relative_speed_y , relative_speed_x)
         # V_verticle = target_speed * np.sin(2 * np.pi - (global_gimbal_yaw + target_theta + 90))
         # print 'target_speed',target_speed, 'target_theta',target_theta,'V_verticle',V_verticle
-        V_verticle = relative_speed_x * np.sin(global_gimbal_yaw) + relative_speed_y * np.cos(global_gimbal_yaw)
-        #print 'V_verticle',V_verticle,'global_gimbal_yaw',global_gimbal_yaw,'relative_speed_x',relative_speed_x,'relative_speed_y',relative_speed_y
+        V_verticle = -relative_speed_x * np.sin(gimbal_yaw) + relative_speed_y * np.cos(gimbal_yaw)
+        V_parallel = relative_speed_x * np.cos(gimbal_yaw) + relative_speed_y * np.sin(gimbal_yaw)
+        #print 'V_v',V_verticle,'V_p',V_parallel,'gimbal_yaw',gimbal_yaw,'re_speed_x',relative_speed_x,'rel_speed_y',relative_speed_y
+        
         #print V_verticle, odom_yaw
         #计算检测到的目标和我自身的距离
-        distance_to_enemy = np.sqrt((ukf_out_pos_x - (odom_pos_x + 0.22*np.cos(odom_yaw)))**2 +(ukf_out_pos_y - (odom_pos_y+ 0.22*np.cos(odom_yaw)))**2)
-        #计算子弹飞行时间
-        T_FLY = distance_to_enemy / BULLET_SPEED
-        #反解算出需要的预瞄角度
-        predict_angle = np.arctan(V_verticle * (T_PNP_DELAY + T_FLY) / distance_to_enemy)
+        #pnp_distance_to_enemy = np.sqrt(pnp_xy_distance **2 + GUN_ARMOR_HEIGHT **2)
+        
 
-        lpf_input_list.append(predict_angle)
-        lpf_out_list = butter_lowpass_filter(lpf_input_list, PNP_LPF_CUTOFF, PNP_LPS_SAMPLING_FREQ, LPF_ORDER)
-        predict_angle = lpf_out_list[5]
+        predict_xy_distance = np.sqrt(ukf_out_pos_x**2 +ukf_out_pos_y**2)
+        #predict_distance_to_enemy = np.sqrt(predict_xy_distance **2 + GUN_ARMOR_HEIGHT **2)
+
+
+        #计算子弹飞行时间
+        #T_FLY = rs_xy_distance / ((BULLET_SPEED + BULLET_FRICTION) * np.cos(gimbal_pitch))
+        PREDICT_T_FLY = predict_xy_distance / ((BULLET_SPEED + BULLET_FRICTION)* np.cos(gimbal_pitch))
+        #反解算出需要的预瞄角度
+        verticle_angle = np.arctan(V_verticle * (T_PNP_DELAY_VER + PREDICT_T_FLY) / predict_xy_distance)
+
+
+        #global
+        # relative_speed_x = ukf_out_vel_x - odom_vel_x
+        # relative_speed_y = ukf_out_vel_y - odom_vel_y
+        # V_verticle = relative_speed_x * np.sin(global_gimbal_yaw) + relative_speed_y * np.cos(global_gimbal_yaw)
+        # distance_to_enemy = np.sqrt((ukf_out_pos_x - (odom_pos_x + 0.22*np.cos(odom_yaw)))**2 +(ukf_out_pos_y - (odom_pos_y+ 0.22*np.cos(odom_yaw)))**2)
+
+
+        lpf_input_list_ver_pnp.append(verticle_angle)
+        lpf_input_list_ver_pnp = butter_lowpass_filter(lpf_input_list_ver_pnp, PNP_LPF_CUTOFF_VER, PNP_LPS_SAMPLING_FREQ, LPF_ORDER)
+        lpf_input_list_ver_pnp = deque(lpf_input_list_ver_pnp.tolist(),maxlen = 6)
+        verticle_angle_ver = lpf_input_list_ver_pnp[5]
+
+        # parallel_angel = np.arctan(predict_xy_distance / GUN_ARMOR_HEIGHT) - np.arctan((predict_xy_distance + (PREDICT_T_FLY + T_PNP_DELAY_PAR) * V_parallel) / GUN_ARMOR_HEIGHT)
+        
+        # lpf_input_list_par_pnp.append(parallel_angel)
+        # lpf_out_list_par_pnp = butter_lowpass_filter(lpf_input_list_par_pnp, PNP_LPF_CUTOFF_PAR, PNP_LPS_SAMPLING_FREQ, LPF_ORDER)
+        # #lpf_input_list_par_pnp = deque(lpf_input_list_par_pnp.tolist(),maxlen = 6)
+        # parallel_angel = lpf_out_list_par_pnp[5]
 
     predict_pos = Odometry()
     predict_pos.header.frame_id = "predict"
@@ -595,30 +691,73 @@ while not rospy.is_shutdown():
 
     predict_pos.twist.twist.linear.z = TEMPERAL_LOST
     
-    predict_pos.pose.pose.orientation.x = UNABLE_PREDICT    
-    predict_pos.pose.pose.orientation.y = aimtheta
+    #predict_pos.pose.pose.orientation.x = UNABLE_PREDICT  
+  
+
     if TARGET_RECETIVED == True: 
         #dyaw between target and gimbal
-        gimbal_dtheta = aimtheta - global_gimbal_yaw 
-        # print 'gimbal_dtheta',gimbal_dtheta/np.pi*180,'aimtheta', aimtheta, 'global_gimbal_yaw',global_gimbal_yaw/np.pi*180
+        gimbal_dtheta = global_aimtheta - global_gimbal_yaw
+        if gimbal_dtheta < -np.pi:
+            gimbal_dtheta = gimbal_dtheta + 2 * np.pi
+        if gimbal_dtheta > np.pi:
+            gimbal_dtheta = gimbal_dtheta - 2 * np.pi
+
+        predict_pos.pose.pose.position.z = aim_relative_distance
+        predict_pos.pose.pose.orientation.y = global_aimtheta
+        #print 'gimbal_dtheta',gimbal_dtheta/np.pi*180,'aimtheta', aimtheta, 'global_gimbal_yaw',global_gimbal_yaw/np.pi*180
         predict_pos.pose.pose.orientation.z = gimbal_dtheta
     else:
-        predict_pos.pose.pose.orientation.z = 999 
+        predict_pos.pose.pose.orientation.z = 999
+        predict_pos.pose.pose.orientation.y = 999 
+        predict_pos.pose.pose.position.z = 999 
 
     #send predict when ukf avaliable
     if PNP_UKF_AVAILABLE or RS_UKF_AVAILABLE:
-        predict_pos.pose.pose.orientation.w = -predict_angle/np.pi*180
-    elif pnp_lost_counter > LOST_TRESH and rs_lost_counter > LOST_TRESH:
+        predict_pos.pose.pose.orientation.w = -verticle_angle/np.pi*180
+        predict_pos.pose.pose.orientation.x = parallel_angel/np.pi*180
+    elif pnp_lost_counter > PNP_LOST_TRESH and rs_lost_counter > RS_LOST_TRESH:
         predict_pos.pose.pose.orientation.w = 0
+        predict_pos.pose.pose.orientation.x = 0
 
 
-    #MAX PREDICT ANGLE
-    if predict_pos.pose.pose.orientation.w >= MAX_PREDICT_ANGLE:
-        predict_pos.pose.pose.orientation.w = MAX_PREDICT_ANGLE
-    elif predict_pos.pose.pose.orientation.w <= - MAX_PREDICT_ANGLE:
-        predict_pos.pose.pose.orientation.w = -MAX_PREDICT_ANGLE
 
+    #MAX PREDICT ANGLE 
+    # verticle_angle
+    if predict_pos.pose.pose.orientation.w >= MAX_VERTICLE_ANGLE:
+        predict_pos.pose.pose.orientation.w = MAX_VERTICLE_ANGLE
+    elif predict_pos.pose.pose.orientation.w <= - MAX_VERTICLE_ANGLE:
+        predict_pos.pose.pose.orientation.w = -MAX_VERTICLE_ANGLE
+
+
+
+    if predict_xy_distance > 3:
+        gravital_angel = -2.7192 * predict_xy_distance ** 2 + 10.401 * predict_xy_distance - 9.7522
+        # restrain the max limit 
+        if gravital_angel < MAX_GRAVITAL_ANGEL:
+            gravital_angel = MAX_GRAVITAL_ANGEL
+    elif predict_xy_distance < 0 and predict_xy_distance <2.2:
+        gravital_angel = 0
+
+    # print 'gravity',gravital_angel,predict_pos.pose.pose.orientation.x
+    #gravital_angel = 0 
+    predict_pos.pose.pose.orientation.x = predict_pos.pose.pose.orientation.x + gravital_angel
+
+    # parallel_angel
+    if predict_pos.pose.pose.orientation.x >= MAX_PARALLEL_ANGLE:
+        predict_pos.pose.pose.orientation.x = MAX_PARALLEL_ANGLE
+    elif predict_pos.pose.pose.orientation.x <= - MAX_PARALLEL_ANGLE:
+        predict_pos.pose.pose.orientation.x = -MAX_PARALLEL_ANGLE
+
+    if ENABLE_PREDICT == False:
+        predict_pos.pose.pose.orientation.w = 0
+        predict_pos.pose.pose.orientation.x = 0 
+        
+    #测试代码,用来屏蔽预测
     #predict_pos.pose.pose.orientation.w = 0
+    #predict_pos.pose.pose.orientation.x = 0
+    TARGET_RECETIVED = False
+
+    #print predict_pos.pose.pose.orientation.z
 
     pub_ukf_vel.publish(predict_pos) 
 

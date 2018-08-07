@@ -4,6 +4,7 @@ int16 remainingHP
 int16 bulletCount
 int16 enemyNum
 geometry_msgs/Pose pose
+geometry_msgs/Twist twist
 geometry_msgs/Pose setting
 geometry_msgs/Pose targetRelative
 geometry_msgs/Pose targetGlobal

@@ -133,8 +133,8 @@ def generate_goal(point1, point2, mode):
 if __name__ == '__main__':
     current_pose = Pose()  
     flag1, flag2 = False, False
-    point1 = (1, 2)
-    point2 = (1, 3)
+    point1 = (2, 2)
+    point2 = (2, 3)
     last_goal_pose = Pose()
     last_goal_pose.position.x = point1[0]
     last_goal_pose.position.y = point1[1]

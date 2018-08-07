@@ -51,8 +51,8 @@ while not rospy.is_shutdown():
 
         team.pose.position.x = pos_x
         team.pose.position.y = pos_y
-        team.twist.linear.x = vel_X
-        team.twist.linear.y = vel_y
+        # team.twist.linear.x = vel_X
+        # team.twist.linear.y = vel_y
         team.pose.orientation.x = qua[0]
         team.pose.orientation.y = qua[1]
         team.pose.orientation.z = qua[2]

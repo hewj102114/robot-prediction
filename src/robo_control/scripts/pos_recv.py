@@ -36,8 +36,8 @@ while not rospy.is_shutdown():
         remainingHP = int(datalist[7])
         bulletCount = int(datalist[8])
         enemy_num = int(datalist[9])
-        vel_x = int(datalist[10])
-        vel_y = int(datalist[11])
+        vel_x = float(datalist[10])
+        vel_y = float(datalist[11])
 
         qua = quaternion_from_euler(0, 0, pos_yaw)
 

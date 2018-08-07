@@ -18,10 +18,12 @@ enemy_num = 0
 
 
 def callback_odom(msg):
-    global pos_x, pos_y, speed_x, speed_y, pos_yaw
+    global pos_x, pos_y, speed_x, speed_y, pos_yaw, vel_x, vel_y
 
     pos_x = msg.pose.pose.position.x
     pos_y = msg.pose.pose.position.y
+    vel_x = msg.pose.pose.position.y
+    vel_y = msg.pose.pose.position.y
     qua = [msg.pose.pose.orientation.x, msg.pose.pose.orientation.y,
            msg.pose.pose.orientation.z, msg.pose.pose.orientation.w]
     speed_x = msg.twist.twist.linear.x
@@ -62,8 +64,8 @@ addr = (ip, 10001)
 rate = rospy.Rate(60)
 while not rospy.is_shutdown():
     
-    data_send = "%f %f %f %f %f %f %f %d %d %d" % (
-    pos_x, pos_y, pos_yaw, target_global_x, target_global_y, target_rel_x, target_rel_y, remainingHP, bulletCount, enemy_num)
+    data_send = "%f %f %f %f %f %f %f %d %d %d %f %f" % (
+    pos_x, pos_y, pos_yaw, target_global_x, target_global_y, target_rel_x, target_rel_y, remainingHP, bulletCount, enemy_num, vel_x, vel_y)
 
     s.sendto(data_send.encode(encoding="utf-8"), addr)
     rate.sleep()

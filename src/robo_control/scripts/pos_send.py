@@ -11,7 +11,7 @@ import time
 import numpy as np
 
 
-pos_x = pos_y = pos_yaw = speed_x = speed_y = 0
+pos_x = pos_y = vel_x = vel_y = pos_yaw = speed_x = speed_y = 0
 remainingHP = bulletCount = 0
 target_global_x = target_global_y = target_rel_x = target_rel_y = 0
 enemy_num = 0
@@ -22,8 +22,8 @@ def callback_odom(msg):
 
     pos_x = msg.pose.pose.position.x
     pos_y = msg.pose.pose.position.y
-    vel_x = msg.pose.pose.position.y
-    vel_y = msg.pose.pose.position.y
+    vel_x = msg.twist.twist.linear.x
+    vel_y = msg.twist.twist.linear.y
     qua = [msg.pose.pose.orientation.x, msg.pose.pose.orientation.y,
            msg.pose.pose.orientation.z, msg.pose.pose.orientation.w]
     speed_x = msg.twist.twist.linear.x

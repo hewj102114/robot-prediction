@@ -162,8 +162,9 @@ cout<<"ssssssssss"<<endl;
     robo_uwb_pose = uwb_odom_msg.pose.pose;
     if (pre_uwb_ready_flag != msg_frommcu.uwb_ready_flag && pre_uwb_x!=msg_frommcu.uwb_x &&  pre_uwb_y!=msg_frommcu.uwb_y && pre_uwb_yaw!=msg_frommcu.uwb_yaw.num)
     {
-        pub_uwb_odom.publish(uwb_odom_msg);
+        
     }
+    pub_uwb_odom.publish(uwb_odom_msg);
     pre_uwb_ready_flag = msg_frommcu.uwb_ready_flag;
     pre_uwb_x=msg_frommcu.uwb_x;
     pre_uwb_y=msg_frommcu.uwb_y;
@@ -840,6 +841,7 @@ GambalInfo RoboControl::ctl_stack_enemy(bool enable_chassis_rotate)
             output_pitch = ctl_pid(P_pitch, I_pitch, D_pitch, error, last_error);
             last_error = error;
             sent_mcu_gimbal_result.pitch = output_pitch * 100;
+            sent_mcu_gimbal_result.pitch = armor_info_msg.pitch;
             sent_mcu_gimbal_result.global_z = armor_info_msg.global_z * 100;
 
             armor_lost_counter = 0;

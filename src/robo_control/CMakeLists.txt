@@ -37,15 +37,15 @@ CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs  nav_msgs tf sensor_msgs  mov
 #  DEPENDS system_lib
 )
 
-
-
-
 include_directories(
 include
 ${catkin_INCLUDE_DIRS} 
 )
 
-
+ install(PROGRAMS
+   scripts/navigation.py
+   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+ )
 
 
 add_executable(nav_test src/navigation_test.cpp src/robo_control.cpp src/serial.cpp)
@@ -75,5 +75,11 @@ target_link_libraries(enemy_pnp_listen
 add_executable(control_node src/MainControl.cpp src/robo_control.cpp src/serial.cpp)
 add_dependencies(control_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(control_node
+  ${catkin_LIBRARIES}
+)
+
+add_executable(NCEC src/MainControl.cpp src/robo_control.cpp src/serial.cpp)
+add_dependencies(NCEC ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(NCEC
   ${catkin_LIBRARIES}
 )

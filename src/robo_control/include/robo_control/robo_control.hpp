@@ -298,7 +298,7 @@ class RoboControl
     float D_pitch = 0;
     float MAX_SUM_ERROR = 1;
 
-    bool enable_direct_control_yaw = true;
+    bool enable_direct_control_yaw = false;
 
     float P_v_yaw = 1;
     float I_v_yaw = 0.1;

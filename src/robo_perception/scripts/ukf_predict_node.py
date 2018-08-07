@@ -208,7 +208,7 @@ def UKFPnpInit(in_dt, init_x):
     ukf_pnp.R = np.diag([p_std_x, v_std_x, p_std_y, v_std_y]) 
     ukf_pnp.Q[0:2, 0:2] = Q_discrete_white_noise(2, dt=dt, var=0.2)
     ukf_pnp.Q[2:4, 2:4] = Q_discrete_white_noise(2, dt=dt, var=0.2)
-    ukf_pnp.P = np.diag([8, 1.5  ,5, 1.5])
+    ukf_pnp.P = np.diag([8, 1.5 ,5, 1.5])
 
 def TFinit():
     global tfBuffer
@@ -476,7 +476,7 @@ def callback_pnp(pnp):
          
         
                 
-#TODO see weather to combine self speed. or leave it to other code    
+  
 def callback_odom(odom):
     global odom_yaw, odom_pos_x, odom_pos_y, odom_vel_x, odom_vel_y
     #only yaw are available
@@ -504,7 +504,7 @@ def callback_target(target):
         aimtheta = np.arctan2(aim_target_rel_y, aim_target_rel_x)
         global_aimtheta = aimtheta + odom_yaw
 
-        print aim_relative_distance, aimtheta,global_aimtheta
+        print aim_relative_distance, aimtheta, global_aimtheta
 
         ENABLE_PREDICT = target.object[0].globalpose.orientation.w
 
@@ -751,9 +751,10 @@ while not rospy.is_shutdown():
     if ENABLE_PREDICT == False:
         predict_pos.pose.pose.orientation.w = 0
         predict_pos.pose.pose.orientation.x = 0 
+        
     #测试代码,用来屏蔽预测
     #predict_pos.pose.pose.orientation.w = 0
-    predict_pos.pose.pose.orientation.x = 0
+    #predict_pos.pose.pose.orientation.x = 0
     TARGET_RECETIVED = False
 
     #print predict_pos.pose.pose.orientation.z

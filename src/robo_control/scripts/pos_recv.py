@@ -8,7 +8,7 @@ import socket
 import time
 
 
-RECV_LEN = 12
+RECV_LEN = 14
 lost_counter = 0
 LOST_TRESH = 50
 
@@ -38,6 +38,8 @@ while not rospy.is_shutdown():
         enemy_num = int(datalist[9])
         vel_x = float(datalist[10])
         vel_y = float(datalist[11])
+        time_sec = int(datalist[12])
+        time_nsec = int(datalist[13])
 
         
 
@@ -45,7 +47,9 @@ while not rospy.is_shutdown():
 
         
         team.header.frame_id = "team"
-        team.header.stamp = rospy.Time.now()
+        team.header.stamp.secs = time_sec
+        team.header.stamp.nsecs = time_nsec
+
 
         team.remainingHP = remainingHP
         team.bulletCount = bulletCount

@@ -46,14 +46,16 @@ bool Serial::ReadData(struct RobotMsgFromMCU& msg) {
   int data_ready = 0;
   int data_start = 0;
   while (!data_ready) {
+
     int ret = read(fd, tmp, 1);
+
     if (ret == 0) continue;
     if (tmp[0] == 0x7F) data_start = 1;
     if (data_start) {
       *ptr = tmp[0]; 
       ptr++;
        float  a;
-      // printf("size %d\n",sizeof(msg));
+      printf("%d size %X \n",ptr-buf,tmp[0]);
       if (tmp[0] == 0x7E) {
         //printf("%X %X\n",tmp[0],buf[sizeof(msg)+1]);
 

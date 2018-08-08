@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         robo_ctl.last_enemy_target_pose.position.y = robo_ctl.last_enemy_target.object[0].globalpose.position.y;
         robo_ctl.sent_mcu_gimbal_msg = robo_ctl.ctl_stack_enemy(); // 云台一直转动, 无论干什么都是一直转动
         // v_yaw: -3.14 -> 逆时针 3.14 -> 顺时针
-        ROS_INFO("MCU VEL %d, %f, %f", robo_ctl.sent_mcu_vel_msg.mode, robo_ctl.sent_mcu_vel_msg.v_x, robo_ctl.sent_mcu_vel_msg.v_y);
+        ROS_INFO("MCU VEL %d, %f, %f, %f", robo_ctl.sent_mcu_vel_msg.mode, robo_ctl.sent_mcu_vel_msg.v_x, robo_ctl.sent_mcu_vel_msg.v_y, robo_ctl.sent_mcu_vel_msg.v_yaw);
         robo_ctl.sendMCUMsg(robo_ctl.sent_mcu_vel_msg.mode, robo_ctl.sent_mcu_gimbal_msg.mode,
                             robo_ctl.sent_mcu_vel_msg.v_x, robo_ctl.sent_mcu_vel_msg.v_y, robo_ctl.sent_mcu_vel_msg.v_yaw,
                             robo_ctl.sent_mcu_gimbal_msg.yaw, robo_ctl.sent_mcu_gimbal_msg.pitch, robo_ctl.sent_mcu_gimbal_msg.global_z);

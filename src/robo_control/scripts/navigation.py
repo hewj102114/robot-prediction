@@ -18,6 +18,7 @@ import sys
 import os
 import glob
 
+from tf.transformations import euler_from_quaternion
 from geometry_msgs.msg import TransformStamped, PoseStamped, Pose, Twist, Point
 from sensor_msgs.msg import Image, PointCloud2
 import sensor_msgs.point_cloud2 as pc2
@@ -67,27 +68,41 @@ def callback_calculate_vel(msg):
     global goal_pose, current_pose, pidctrl, point1, point2
     # goal_pose = msg
 
+    qn_ukf = [current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w]
+    (current_roll, current_pitch, current_yaw) = euler_from_quaternion(qn_ukf)
+
     goal_pose = generate_goal(point1, point2, 0)
-    print("goal_x: {}, goal_y: {}".format(goal_pose.position.x, goal_pose.position.y))
+    print("current_x: {}, current_y: {}, current_yaw: {}".format(current_pose.position.x, current_pose.position.y, current_yaw))
+    print("goal_x: {}, goal_y: {}, goal_yaw: {}".format(goal_pose.position.x, goal_pose.position.y, goal_yaw))
     
     dx = current_pose.position.x - goal_pose.position.x
     dy = current_pose.position.y - goal_pose.position.y
-    print("dx: {}, dy: {}".format(dx, dy))
-    if abs(dx) < 0.1:
+    dyaw = current_yaw - goal_yaw
+
+    print("dx: {}, dy: {}, dyaw: {}".format(dx, dy, dyaw))
+    if abs(dyaw) < 10*PI/180:
+        vel_yaw = 0
+        if abs(dx) < 0.1:
+            vel_x = 0.01
+        else:
+            vel_x = pidctrl_x.calc(dx)
+
+        if abs(dy) < 0.1:
+            vel_y = 0.01
+        else:
+            vel_y = pidctrl_y.calc(dy)
+    else:
+        vel_yaw = pidctrl_yaw.calc(dyaw)
         vel_x = 0
-    else:
-        vel_x = pidctrl.calc(dx)
-    if abs(dy) < 0.1:
         vel_y = 0
-    else:
-        vel_y = pidctrl.calc(dy)
 
     msg_vel = Twist()
     msg_vel.linear.x = -vel_x
     msg_vel.linear.y = -vel_y
+    msg_vel.angular.z = -vel_yaw
     # msg_vel.angular.z = 0
 
-    print("vel_x: {}, vel_y: {}".format(vel_x, vel_y))
+    print("vel_x: {}, vel_y: {}, vel_yaw: {}".format(vel_x, vel_y, vel_yaw))
     pub_vel.publish(msg_vel)
 
 def generate_goal(point1, point2, mode):
@@ -131,15 +146,19 @@ def generate_goal(point1, point2, mode):
     
 
 if __name__ == '__main__':
+    PI = 3.1415926
     current_pose = Pose()  
     flag1, flag2 = False, False
-    point1 = (2, 2)
-    point2 = (2, 3)
+    point1 = (1, 1.5)
+    point2 = (1, 2.5)
+    goal_yaw = 0.0*PI/180.0
     last_goal_pose = Pose()
     last_goal_pose.position.x = point1[0]
     last_goal_pose.position.y = point1[1]
     
-    pidctrl = PIDCtrl(1, 0.1, 0, 0.5)
+    pidctrl_x = PIDCtrl(2, 0, 0, 1)
+    pidctrl_y = PIDCtrl(2, 0, 0, 1)
+    pidctrl_yaw = PIDCtrl(1, 0, 0, 0.5)
     rospy.init_node("robo_navigation")
 
     sub_odom = rospy.Subscriber("odom", Odometry, callback_odom)

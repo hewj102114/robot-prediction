@@ -423,7 +423,6 @@ void RoboControl::cb_ukf_enemy_information(const nav_msgs::Odometry &msg)
 {
     robo_ukf_enemy_information = msg.pose.pose;
 
-    if (robo_ukf_enemy_information.position.z != 999)
     {
         SELF_ENEMY_TARGET_DISTANCE = robo_ukf_enemy_information.position.z;
     }

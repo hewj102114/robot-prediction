@@ -80,6 +80,7 @@ def callback_calculate_vel(msg):
     dyaw = current_yaw - goal_yaw
 
     print("dx: {}, dy: {}, dyaw: {}".format(dx, dy, dyaw))
+
     if abs(dyaw) < 10*PI/180:
         vel_yaw = 0
         if abs(dx) < 0.1:
@@ -93,8 +94,8 @@ def callback_calculate_vel(msg):
             vel_y = pidctrl_y.calc(dy)
     else:
         vel_yaw = pidctrl_yaw.calc(dyaw)
-        vel_x = 0
-        vel_y = 0
+        vel_x = 0.1
+        vel_y = 0.1
 
     msg_vel = Twist()
     msg_vel.linear.x = -vel_x
@@ -149,8 +150,8 @@ if __name__ == '__main__':
     PI = 3.1415926
     current_pose = Pose()  
     flag1, flag2 = False, False
-    point1 = (1, 1.5)
-    point2 = (1, 2.5)
+    point1 = (2, 2.5)
+    point2 = (2, 1.5)
     goal_yaw = 0.0*PI/180.0
     last_goal_pose = Pose()
     last_goal_pose.position.x = point1[0]
@@ -158,7 +159,7 @@ if __name__ == '__main__':
     
     pidctrl_x = PIDCtrl(2, 0, 0, 1)
     pidctrl_y = PIDCtrl(2, 0, 0, 1)
-    pidctrl_yaw = PIDCtrl(1, 0, 0, 0.5)
+    pidctrl_yaw = PIDCtrl(2, 0, 0, 0.5)
     rospy.init_node("robo_navigation")
 
     sub_odom = rospy.Subscriber("odom", Odometry, callback_odom)

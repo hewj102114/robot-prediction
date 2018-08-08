@@ -55,7 +55,7 @@ last_enemy_position = ObjectList()
 connection_status = team_hp = global_team_x = global_team_y = 0
 
 lose_frame_count = 0
-video = cv2.VideoWriter('/home/ubuntu/robot-prediction/src/robo_perception/scripts/visual/demo.avi',
+video = cv2.VideoWriter('/home/ubuntu/Documents/robot-prediction/src/robo_perception/scripts/visual/demo.avi',
                         cv2.VideoWriter_fourcc(*"MJPG"),
                         20,
                         (424, 240))
@@ -79,7 +79,7 @@ def DetectInit():
     last_enemy_position.object = []
 
     detect_net = 'squeezeDet'
-    checkpoint = '/home/ubuntu/robot-prediction/src/robo_perception/scripts/weights/Infrared-Armor-800-Images/model.ckpt-99999'
+    checkpoint = '/home/ubuntu/Documents/robot-prediction/src/robo_perception/scripts/weights/Infrared-Armor-800-Images/model.ckpt-99999'
 
     assert detect_net == 'squeezeDet' or detect_net == 'squeezeDet+', 'Selected nueral net architecture not supported'
 
@@ -219,7 +219,7 @@ def enemy_self_identify(rgb_image, robo_bboxes, show_image=False, save_image=Fal
             result = enemy.append(result)
             if save_image:
                 cv2.imwrite(
-                    "/home/ubuntu/robot-prediction/src/robo_perception/scripts/visual/red_blue.jpg", rgb_image[:, :, ::-1])
+                    "/home/ubuntu/Documents/robot-prediction/src/robo_perception/scripts/visual/red_blue.jpg", rgb_image[:, :, ::-1])
             if show_image:
                 cv2.rectangle(rgb_image, (int(x_min), int(y_min)),
                               (int(x_max), int(y_max)), (255, 0, 0), 2)

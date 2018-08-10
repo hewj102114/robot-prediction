@@ -72,7 +72,7 @@ PNP_MAX_PREDICT_DISTANCE = 1.2
 RS_INIT = True
 PNP_INIT = True
 
-ENABLE_PREDICT = True #启动预测标志位（从策略层面接收）
+ENABLE_PREDICT = False #启动预测标志位（从策略层面接收）
 PNP_LAST_AVAILABLE = False #PNP上一帧可行标志位
 PNP_DATA_AVAILABLE = False #PNP数据可行标志位
 RS_LAST_AVAILABLE = False #Realsense上一帧可行标志位

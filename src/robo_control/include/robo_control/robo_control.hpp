@@ -285,8 +285,8 @@ class RoboControl
     float MAX_TRACK_ENEMY_DIS = 3.0;
 
     int ARMOR_MAX_LOST_NUM = 120;               // armor 最大允许丢帧数量 (真正丢帧)
-    int ARMOR_AROUND_MAX_LOST_NUM = 120;        // armor 最大允许丢帧数量(摇头)
-    int REALSENSE_AROUND_MAX_LOST_NUM = 120;    // realsense 最大允许的丢帧数量(摇头)
+    int ARMOR_AROUND_MAX_LOST_NUM = 240;        // armor 最大允许丢帧数量(摇头)
+    int REALSENSE_AROUND_MAX_LOST_NUM = 240;    // realsense 最大允许的丢帧数量(摇头)
 
     float LOW_SHOT_SPEED_DISTANCE = 4.0;        // 低速射击最小距离
     float HIGH_SHOT_SPEED_DISTANCE = 3.0;       // 高速射击最大距离

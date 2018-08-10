@@ -182,7 +182,7 @@ def UKFRsInit(in_dt, init_x):
     global ukf_rs
 
     p_std_x, p_std_y = 0.001, 0.001
-    v_std_x, v_std_y = 0.001, 0.001
+    v_std_x, v_std_y = 0.01, 0.01
     dt = in_dt 
 
 
@@ -527,7 +527,7 @@ subtarget = rospy.Subscriber('enemy/target', ObjectList, callback_target,queue_s
 
 pub_ukf_vel = rospy.Publisher('ukf/enemy', Odometry, queue_size=1)
 
-rate = rospy.Rate(60) # 30hz
+rate = rospy.Rate(30) # 30hz
 while not rospy.is_shutdown():
 
     if pnp_xy_distance > PNP_MAX_PREDICT_DISTANCE:
@@ -566,10 +566,10 @@ while not rospy.is_shutdown():
         global_gimbal_yaw = global_gimbal_yaw - 2 * np.pi
 
     
-    # if PNP_UKF_AVAILABLE or RS_UKF_AVAILABLE:
-    #     print 'RS','X',rs_pos_x,'Y',rs_pos_y, 'VX',rs_vel_x,'VY',rs_vel_y,'RDA',RS_DATA_AVAILABLE
-    #     print 'PNP','X',pnp_pos_x,'Y',pnp_pos_y, 'VX',pnp_vel_x,'VY',pnp_vel_x,'PDA',PNP_DATA_AVAILABLE
-    #     print 'KALMAN', 'X',ukf_out_pos_x,'Y',ukf_out_pos_y, 'VX',ukf_out_vel_x,'VY',ukf_out_vel_y
+    if PNP_UKF_AVAILABLE or RS_UKF_AVAILABLE:
+        print 'RS','X',rs_pos_x,'Y',rs_pos_y, 'VX',rs_vel_x,'VY',rs_vel_y,'RDA',RS_DATA_AVAILABLE
+        print 'PNP','X',pnp_pos_x,'Y',pnp_pos_y, 'VX',pnp_vel_x,'VY',pnp_vel_x,'PDA',PNP_DATA_AVAILABLE
+        print 'KALMAN', 'X',ukf_out_pos_x,'Y',ukf_out_pos_y, 'VX',ukf_out_vel_x,'VY',ukf_out_vel_y
 
     #   #
     #           #

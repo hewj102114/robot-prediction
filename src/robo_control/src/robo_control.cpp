@@ -693,7 +693,9 @@ GambalInfo RoboControl::ctl_stack_enemy(bool enable_chassis_rotate)
     *************************************************************************/
     // 2. realsense和armor都没有看到的时候, 并且丢帧数量小于 400, 维持云台角度
     ROS_INFO("armor_lost_counter: %d", armor_lost_counter);
-
+    
+    // delete realsense
+    enemy_information.red_num = 0;
 
     if (armor_info_msg.mode == 3)
     {
@@ -837,10 +839,10 @@ GambalInfo RoboControl::ctl_stack_enemy(bool enable_chassis_rotate)
             // sent_mcu_gimbal_result.pitch = armor_info_msg.pitch + robo_ukf_enemy_information.orientation.x * 100.0;
             // current_pitch = game_msg.gimbalAnglePitch;
             error = (armor_info_msg.pitch + robo_ukf_enemy_information.orientation.x * 100.0) / 100.0;
-            output_pitch = ctl_pid(P_pitch, I_pitch, D_pitch, error, last_error);
+            // output_pitch = ctl_pid(P_pitch, I_pitch, D_pitch, error, last_error);
             last_error = error;
             sent_mcu_gimbal_result.pitch = output_pitch * 100;
-            sent_mcu_gimbal_result.pitch = armor_info_msg.pitch;
+            sent_mcu_gimbal_result.pitch = armor_info_msg.pitch + robo_ukf_enemy_information.orientation.x * 100.0;
             sent_mcu_gimbal_result.global_z = armor_info_msg.global_z * 100;
 
             armor_lost_counter = 0;
